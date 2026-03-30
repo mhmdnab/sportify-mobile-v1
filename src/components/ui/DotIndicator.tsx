@@ -12,7 +12,7 @@ interface DotIndicatorProps {
 export function DotIndicator({
   count,
   activeIndex,
-  activeColor = colors.primary,
+  activeColor = colors.navy,
   inactiveColor = colors.border,
 }: DotIndicatorProps) {
   return (

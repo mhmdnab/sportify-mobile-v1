@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../theme/colors';
+import { useThemeColors } from '../../../theme/useThemeColors';
 import { radius, spacing } from '../../../theme/spacing';
 import { Reservation, ReservationStatus } from '../../../types/api';
 import { formatDate, formatTime } from '../../../utils/date';
@@ -14,13 +15,15 @@ interface ReservationCardProps {
 
 const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: '#FF9500',
-  [ReservationStatus.CONFIRMED]: colors.primary,
+  [ReservationStatus.CONFIRMED]: colors.navy,
   [ReservationStatus.CANCELLED]: colors.error,
+  [ReservationStatus.REJECTED]: '#FF3B30',
   [ReservationStatus.PLAYED]: '#007AFF',
   [ReservationStatus.PAID]: colors.textSecondary,
 };
 
 export function ReservationCard({ reservation, onPress }: ReservationCardProps) {
+  const tc = useThemeColors();
   const statusColor = statusColors[reservation.status] || colors.textHint;
   const venueName = reservation.slot?.availability?.venue?.name || 'Venue';
   const slotTime = reservation.slot
@@ -28,11 +31,11 @@ export function ReservationCard({ reservation, onPress }: ReservationCardProps) 
     : '';
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.container}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[styles.container, { backgroundColor: tc.cardBg }]}>
       <View style={[styles.statusBar, { backgroundColor: statusColor }]} />
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.venue} numberOfLines={1}>{venueName}</Text>
+          <Text style={[styles.venue, { color: tc.textPrimary }]} numberOfLines={1}>{venueName}</Text>
           <View style={[styles.badge, { backgroundColor: `${statusColor}15` }]}>
             <Text style={[styles.badgeText, { color: statusColor }]}>
               {reservation.status}
@@ -42,24 +45,24 @@ export function ReservationCard({ reservation, onPress }: ReservationCardProps) 
 
         <View style={styles.details}>
           <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={14} color={colors.textHint} />
-            <Text style={styles.detailText}>{formatDate(reservation.slotDate)}</Text>
+            <Ionicons name="calendar-outline" size={14} color={tc.textHint} />
+            <Text style={[styles.detailText, { color: tc.textSecondary }]}>{formatDate(reservation.slotDate)}</Text>
           </View>
           {slotTime && (
             <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={14} color={colors.textHint} />
-              <Text style={styles.detailText}>{slotTime}</Text>
+              <Ionicons name="time-outline" size={14} color={tc.textHint} />
+              <Text style={[styles.detailText, { color: tc.textSecondary }]}>{slotTime}</Text>
             </View>
           )}
           {reservation.slot?.price && (
             <View style={styles.detailRow}>
-              <Ionicons name="cash-outline" size={14} color={colors.textHint} />
+              <Ionicons name="cash-outline" size={14} color={tc.textHint} />
               <Text style={styles.priceText}>{formatPrice(reservation.slot.price)}</Text>
             </View>
           )}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textHint} />
+      <Ionicons name="chevron-forward" size={20} color={tc.textHint} />
     </TouchableOpacity>
   );
 }
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
   },
   priceText: {
     fontSize: 13,
-    color: colors.primary,
+    color: colors.navy,
     fontWeight: '600',
   },
 });

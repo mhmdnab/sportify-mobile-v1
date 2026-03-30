@@ -7,25 +7,33 @@ import { Button } from '../../components/ui/Button';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { SkeletonList } from '../../components/ui/Skeleton';
 import { colors } from '../../theme/colors';
+import { useThemeColors } from '../../theme/useThemeColors';
 import { spacing } from '../../theme/spacing';
 import { useReservationsStore } from '../../stores/reservations.store';
 import { ReservationStatus } from '../../types/api';
 import { formatDate, formatTime } from '../../utils/date';
 import { formatPrice } from '../../utils/currency';
 import { BookingsStackParamList } from '../../types/navigation';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
+import { useThemeStore } from '../../stores/theme.store';
+import { useTranslation } from 'react-i18next';
 
 type Props = NativeStackScreenProps<BookingsStackParamList, 'ReservationDetail'>;
 
 const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: '#FF9500',
-  [ReservationStatus.CONFIRMED]: colors.primary,
+  [ReservationStatus.CONFIRMED]: colors.navy,
   [ReservationStatus.CANCELLED]: colors.error,
+  [ReservationStatus.REJECTED]: '#FF3B30',
   [ReservationStatus.PLAYED]: '#007AFF',
   [ReservationStatus.PAID]: colors.textSecondary,
 };
 
 export function ReservationDetailScreen({ route, navigation }: Props) {
+  const { t } = useTranslation();
   const { reservationId } = route.params;
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
   const { currentReservation, isLoading, error, fetchReservationById, cancelReservation } = useReservationsStore();
 
   useEffect(() => {
@@ -33,15 +41,15 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
   }, [reservationId]);
 
   const handleCancel = () => {
-    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
-      { text: 'No', style: 'cancel' },
+    Alert.alert(t('bookings.cancelBooking'), t('bookings.cancelBookingConfirm'), [
+      { text: t('bookings.no'), style: 'cancel' },
       {
-        text: 'Yes, Cancel',
+        text: t('bookings.yesCancel'),
         style: 'destructive',
         onPress: async () => {
           try {
             await cancelReservation(reservationId);
-            Alert.alert('Cancelled', 'Your booking has been cancelled.');
+            Alert.alert(t('bookings.cancelled'), t('bookings.bookingCancelled'));
           } catch {}
         },
       },
@@ -59,7 +67,7 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
   }
 
   if (error || !currentReservation) {
-    return <ErrorState message={error || 'Reservation not found'} onRetry={() => fetchReservationById(reservationId)} />;
+    return <ErrorState message={error || t('bookings.notFound')} onRetry={() => fetchReservationById(reservationId)} />;
   }
 
   const r = currentReservation;
@@ -67,12 +75,13 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
   const canCancel = r.status === ReservationStatus.PENDING || r.status === ReservationStatus.CONFIRMED;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={tc.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Booking Details</Text>
+        <Text style={[styles.headerTitle, { color: tc.textPrimary }]}>{t('bookings.bookingDetails')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -83,30 +92,30 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Booking Info</Text>
-          <InfoRow label="Booking ID" value={`#${r.id}`} />
-          <InfoRow label="Date" value={formatDate(r.slotDate)} />
+          <Text style={[styles.sectionTitle, { color: tc.textPrimary }]}>{t('bookings.bookingInfo')}</Text>
+          <InfoRow label={t('bookings.bookingId')} value={`#${r.id}`} />
+          <InfoRow label={t('bookings.date')} value={formatDate(r.slotDate)} />
           {r.slot && (
             <>
-              <InfoRow label="Time" value={`${formatTime(r.slot.startTime)} - ${formatTime(r.slot.endTime)}`} />
-              <InfoRow label="Price" value={formatPrice(r.slot.price)} highlight />
+              <InfoRow label={t('bookings.time')} value={`${formatTime(r.slot.startTime)} - ${formatTime(r.slot.endTime)}`} />
+              <InfoRow label={t('bookings.price')} value={formatPrice(r.slot.price)} highlight />
             </>
           )}
-          {r.repeatCount > 0 && <InfoRow label="Repeat Count" value={r.repeatCount.toString()} />}
-          {r.notes && <InfoRow label="Notes" value={r.notes} />}
-          <InfoRow label="Booked on" value={formatDate(r.createdAt)} />
+          {r.repeatCount > 0 && <InfoRow label={t('bookings.repeatCount')} value={r.repeatCount.toString()} />}
+          {r.notes && <InfoRow label={t('bookings.notes')} value={r.notes} />}
+          <InfoRow label={t('bookings.bookedOn')} value={formatDate(r.createdAt)} />
         </View>
 
         {r.slot?.availability?.venue && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Venue</Text>
-            <InfoRow label="Venue" value={r.slot.availability.venue.name} />
+            <Text style={[styles.sectionTitle, { color: tc.textPrimary }]}>{t('bookings.venue')}</Text>
+            <InfoRow label={t('bookings.venue')} value={r.slot.availability.venue.name} />
           </View>
         )}
 
         {canCancel && (
           <View style={styles.cancelSection}>
-            <Button title="Cancel Booking" onPress={handleCancel} variant="outline" style={{ borderColor: colors.error }} textStyle={{ color: colors.error }} />
+            <Button title={t('bookings.cancelBooking')} onPress={handleCancel} variant="outline" style={{ borderColor: colors.error }} textStyle={{ color: colors.error }} />
           </View>
         )}
       </ScrollView>
@@ -115,10 +124,11 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
 }
 
 function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  const tc = useThemeColors();
   return (
-    <View style={infoStyles.row}>
-      <Text style={infoStyles.label}>{label}</Text>
-      <Text style={[infoStyles.value, highlight && infoStyles.highlight]}>{value}</Text>
+    <View style={[infoStyles.row, { borderBottomColor: tc.border }]}>
+      <Text style={[infoStyles.label, { color: tc.textSecondary }]}>{label}</Text>
+      <Text style={[infoStyles.value, { color: tc.textPrimary }, highlight && infoStyles.highlight]}>{value}</Text>
     </View>
   );
 }
@@ -143,7 +153,7 @@ const infoStyles = StyleSheet.create({
     textAlign: 'right',
   },
   highlight: {
-    color: colors.primary,
+    color: colors.navy,
     fontWeight: '700',
   },
 });

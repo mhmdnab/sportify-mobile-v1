@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
+import { useThemeColors } from '../../theme/useThemeColors';
 import { spacing } from '../../theme/spacing';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -12,13 +13,19 @@ import { Reservation, ReservationStatus } from '../../types/api';
 import { BookingsStackParamList } from '../../types/navigation';
 import { ReservationCard } from './components/ReservationCard';
 import { BookingsSkeleton } from './components/BookingsSkeleton';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
+import { useThemeStore } from '../../stores/theme.store';
+import { useTranslation } from 'react-i18next';
 
 type Nav = NativeStackNavigationProp<BookingsStackParamList, 'MyBookings'>;
 
 type Tab = 'upcoming' | 'past';
 
 export function MyBookingsScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
   const { reservations, isLoading, error, fetchOwnReservations } = useReservationsStore();
   const [activeTab, setActiveTab] = useState<Tab>('upcoming');
   const [refreshing, setRefreshing] = useState(false);
@@ -41,31 +48,32 @@ export function MyBookingsScreen() {
     return isPending;
   });
   const past = reservations.filter((r) => {
-    const isDone = r.status === ReservationStatus.CANCELLED || r.status === ReservationStatus.PLAYED || r.status === ReservationStatus.PAID;
+    const isDone = r.status === ReservationStatus.CANCELLED || r.status === ReservationStatus.REJECTED || r.status === ReservationStatus.PLAYED || r.status === ReservationStatus.PAID;
     return isDone;
   });
 
   const data = activeTab === 'upcoming' ? upcoming : past;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>My Bookings</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
+      <Text style={[styles.title, { color: tc.textPrimary }]}>{t('bookings.myBookings')}</Text>
 
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { borderBottomColor: tc.border }]}>
         <TouchableOpacity
           onPress={() => setActiveTab('upcoming')}
           style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
         >
-          <Text style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}>
-            Upcoming
+          <Text style={[styles.tabText, { color: tc.textHint }, activeTab === 'upcoming' && styles.activeTabText]}>
+            {t('bookings.upcoming')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setActiveTab('past')}
           style={[styles.tab, activeTab === 'past' && styles.activeTab]}
         >
-          <Text style={[styles.tabText, activeTab === 'past' && styles.activeTabText]}>
-            Past
+          <Text style={[styles.tabText, { color: tc.textHint }, activeTab === 'past' && styles.activeTabText]}>
+            {t('bookings.past')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -77,8 +85,8 @@ export function MyBookingsScreen() {
       ) : data.length === 0 ? (
         <EmptyState
           icon="calendar-outline"
-          title={activeTab === 'upcoming' ? 'No upcoming bookings' : 'No past bookings'}
-          message="Your bookings will appear here"
+          title={activeTab === 'upcoming' ? t('bookings.noUpcoming') : t('bookings.noPast')}
+          message={t('bookings.bookingsAppearHere')}
         />
       ) : (
         <FlatList
@@ -86,7 +94,7 @@ export function MyBookingsScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.navy} />}
           renderItem={({ item }) => (
             <ReservationCard
               reservation={item}
@@ -126,7 +134,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: colors.primary,
+    borderBottomColor: colors.navy,
   },
   tabText: {
     fontSize: 15,
@@ -134,10 +142,11 @@ const styles = StyleSheet.create({
     color: colors.textHint,
   },
   activeTabText: {
-    color: colors.primary,
+    color: colors.navy,
     fontWeight: '600',
   },
   list: {
     paddingHorizontal: spacing.screenPadding,
+    paddingBottom: 100,
   },
 });

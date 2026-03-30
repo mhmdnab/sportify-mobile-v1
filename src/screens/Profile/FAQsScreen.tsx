@@ -3,15 +3,19 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { useThemeColors } from '../../theme/useThemeColors';
+import { useThemeStore } from '../../stores/theme.store';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { SkeletonList } from '../../components/ui/Skeleton';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 import { api } from '../../lib/api';
 import { Faq, PaginatedResponse } from '../../types/api';
 
 export function FAQsScreen() {
   const navigation = useNavigation();
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
   const [faqs, setFaqs] = useState<Faq[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +39,13 @@ export function FAQsScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={tc.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>FAQs</Text>
+        <Text style={[styles.headerTitle, { color: tc.textPrimary }]}>FAQs</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -56,18 +61,18 @@ export function FAQsScreen() {
             <TouchableOpacity
               key={faq.id}
               onPress={() => setExpandedId(expandedId === faq.id ? null : faq.id)}
-              style={styles.faqItem}
+              style={[styles.faqItem, { borderBottomColor: tc.border }]}
             >
               <View style={styles.questionRow}>
-                <Text style={styles.question}>{faq.question}</Text>
+                <Text style={[styles.question, { color: tc.textPrimary }]}>{faq.question}</Text>
                 <Ionicons
                   name={expandedId === faq.id ? 'chevron-up' : 'chevron-down'}
                   size={20}
-                  color={colors.textHint}
+                  color={tc.textHint}
                 />
               </View>
               {expandedId === faq.id && (
-                <Text style={styles.answer}>{faq.answer}</Text>
+                <Text style={[styles.answer, { color: tc.textSecondary }]}>{faq.answer}</Text>
               )}
             </TouchableOpacity>
           ))}
@@ -80,7 +85,6 @@ export function FAQsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -92,7 +96,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   scroll: {
     paddingHorizontal: spacing.screenPadding,
@@ -100,7 +103,6 @@ const styles = StyleSheet.create({
   faqItem: {
     paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   questionRow: {
     flexDirection: 'row',
@@ -110,13 +112,11 @@ const styles = StyleSheet.create({
   question: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textPrimary,
     flex: 1,
     marginRight: 8,
   },
   answer: {
     fontSize: 14,
-    color: colors.textSecondary,
     lineHeight: 22,
     marginTop: spacing.md,
   },

@@ -13,3 +13,4 @@ export { DotIndicator } from './DotIndicator';
 export { SearchBar } from './SearchBar';
 export { Badge } from './Badge';
 export { Divider } from './Divider';
+export { StepIndicator } from './StepIndicator';

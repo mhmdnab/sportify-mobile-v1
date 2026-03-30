@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
 import { colors } from '../../theme/colors';
+import { useThemeStore } from '../../stores/theme.store';
 import { radius, sizes, spacing } from '../../theme/spacing';
 
 interface ChipProps {
@@ -11,17 +12,25 @@ interface ChipProps {
 }
 
 export function Chip({ label, active = false, onPress, style }: ChipProps) {
+  const isDark = useThemeStore((s) => s.isDark);
+  const activeBg = isDark ? colors.navyLight : colors.navy;
+  const inactiveBg = isDark ? colors.navyMid : colors.white;
+  const inactiveBorder = isDark ? '#1A2A52' : colors.border;
+  const inactiveTextColor = isDark ? '#EEF0F6' : colors.textPrimary;
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
       style={[
         styles.chip,
-        active ? styles.active : styles.inactive,
+        active
+          ? { backgroundColor: activeBg, borderWidth: 1, borderColor: activeBg }
+          : { backgroundColor: inactiveBg, borderWidth: 1, borderColor: inactiveBorder },
         style,
       ]}
     >
-      <Text style={[styles.label, active ? styles.activeLabel : styles.inactiveLabel]}>
+      <Text style={[styles.label, { color: active ? colors.white : inactiveTextColor }]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -37,24 +46,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
-  active: {
-    backgroundColor: colors.primary,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  inactive: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   label: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  activeLabel: {
-    color: colors.white,
-  },
-  inactiveLabel: {
-    color: colors.textPrimary,
   },
 });

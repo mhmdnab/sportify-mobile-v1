@@ -5,6 +5,7 @@ import { SplashScreen } from '../screens/Splash/SplashScreen';
 import { OnboardingScreen } from '../screens/Onboarding/OnboardingScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { AppNavigator } from './AppNavigator';
+import { OwnerAppNavigator } from './OwnerAppNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -15,6 +16,7 @@ export function RootNavigator() {
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Auth" component={AuthNavigator} />
       <Stack.Screen name="App" component={AppNavigator} />
+      <Stack.Screen name="OwnerApp" component={OwnerAppNavigator} />
     </Stack.Navigator>
   );
 }

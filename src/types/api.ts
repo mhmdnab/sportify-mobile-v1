@@ -12,6 +12,7 @@ export enum ReservationStatus {
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
+  REJECTED = 'REJECTED',
   PLAYED = 'PLAYED',
   PAID = 'PAID',
 }
@@ -25,21 +26,26 @@ export enum EntityType {
 
 export interface Address {
   id?: number;
-  latitude: number;
-  longitude: number;
-  street: string;
+  latitude?: number;
+  longitude?: number;
+  street?: string;
   city: string;
-  state: string;
+  state?: string;
   country: string;
-  postalCode: string;
+  postalCode?: string;
 }
+
+export type Gender = 'MALE' | 'FEMALE';
 
 export interface User {
   id: number;
   name: string;
   email: string;
   phone?: string;
+  phoneCountryCode?: string;
   image: string;
+  gender?: Gender;
+  dateOfBirth?: string;
   isDeleted: boolean;
   isEmailVerified: boolean;
   createdAt: string;
@@ -141,6 +147,7 @@ export interface Slot {
   startTime: string;
   endTime: string;
   price: number;
+  isAvailable?: boolean;
 }
 
 export interface Reservation {

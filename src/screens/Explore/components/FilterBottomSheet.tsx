@@ -4,6 +4,7 @@ import BottomSheet, { BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../theme/colors';
 import { spacing, radius } from '../../../theme/spacing';
+import { useTranslation } from 'react-i18next';
 
 interface FilterOption {
   id: number;
@@ -19,6 +20,7 @@ interface FilterBottomSheetProps {
 
 export const FilterBottomSheet = forwardRef<BottomSheet, FilterBottomSheetProps>(
   ({ title, options, selectedId, onSelect }, ref) => {
+    const { t } = useTranslation();
     const snapPoints = useMemo(() => ['50%'], []);
 
     const renderBackdrop = useCallback(
@@ -40,7 +42,7 @@ export const FilterBottomSheet = forwardRef<BottomSheet, FilterBottomSheetProps>
           <Text style={styles.title}>{title}</Text>
           {selectedId && (
             <TouchableOpacity onPress={() => onSelect(null)}>
-              <Text style={styles.clear}>Clear</Text>
+              <Text style={styles.clear}>{t('explore.clear')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -59,7 +61,7 @@ export const FilterBottomSheet = forwardRef<BottomSheet, FilterBottomSheetProps>
                 {item.name}
               </Text>
               {selectedId === item.id && (
-                <Ionicons name="checkmark" size={20} color={colors.primary} />
+                <Ionicons name="checkmark" size={20} color={colors.navy} />
               )}
             </TouchableOpacity>
           )}
@@ -95,7 +97,7 @@ const styles = StyleSheet.create({
   },
   clear: {
     fontSize: 14,
-    color: colors.primary,
+    color: colors.navy,
     fontWeight: '500',
   },
   list: {
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   selectedOptionText: {
-    color: colors.primary,
+    color: colors.navy,
     fontWeight: '600',
   },
 });

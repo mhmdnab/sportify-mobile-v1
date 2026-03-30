@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../theme/colors';
+import { useThemeColors } from '../../../theme/useThemeColors';
 import { radius, spacing } from '../../../theme/spacing';
 import { Branch } from '../../../types/api';
 
@@ -12,10 +13,11 @@ interface BranchCardProps {
 }
 
 export function BranchCard({ branch, onPress }: BranchCardProps) {
+  const tc = useThemeColors();
   const imageUri = branch.images?.[0];
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.container}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[styles.container, { backgroundColor: tc.cardBg }]}>
       <View style={styles.imageWrapper}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.image} contentFit="cover" />
@@ -31,11 +33,11 @@ export function BranchCard({ branch, onPress }: BranchCardProps) {
         )}
       </View>
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{branch.name}</Text>
+        <Text style={[styles.name, { color: tc.textPrimary }]} numberOfLines={1}>{branch.name}</Text>
         {branch.address && (
           <View style={styles.locationRow}>
-            <Ionicons name="location" size={14} color={colors.primary} />
-            <Text style={styles.location} numberOfLines={1}>
+            <Ionicons name="location" size={14} color={colors.navy} />
+            <Text style={[styles.location, { color: tc.textSecondary }]} numberOfLines={1}>
               {branch.address.city}, {branch.address.street}
             </Text>
           </View>

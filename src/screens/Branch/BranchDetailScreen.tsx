@@ -1,60 +1,70 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BottomSheet from '@gorhom/bottom-sheet';
-import { ImageCarousel } from '../../components/ui/ImageCarousel';
-import { ErrorState } from '../../components/ui/ErrorState';
-import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
-import { useBranchesStore } from '../../stores/branches.store';
-import { Slot, Venue } from '../../types/api';
-import { getDayOfWeek } from '../../utils/date';
-import { HomeStackParamList } from '../../types/navigation';
-import { DatePicker } from './components/DatePicker';
-import { TimeSlotGrid } from './components/TimeSlotGrid';
-import { BookingBottomSheet } from './components/BookingBottomSheet';
-import { FacilityCard } from './components/FacilityCard';
-import { BranchDetailSkeleton } from './components/BranchDetailSkeleton';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Linking,
+  Share,
+  Dimensions,
+} from "react-native";
+import { Image } from "expo-image";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { colors } from "../../theme/colors";
+import { useThemeColors } from "../../theme/useThemeColors";
+import { spacing } from "../../theme/spacing";
+import { useThemeStore } from "../../stores/theme.store";
+import { useBranchesStore } from "../../stores/branches.store";
+import { Venue, Facility } from "../../types/api";
+import { HomeStackParamList } from "../../types/navigation";
+import { BranchDetailSkeleton } from "./components/BranchDetailSkeleton";
+import { BackgroundShapes } from "../../components/ui/BackgroundShapes";
+import { useTranslation } from 'react-i18next';
 
-type Props = NativeStackScreenProps<HomeStackParamList, 'BranchDetail'>;
+type Props = NativeStackScreenProps<HomeStackParamList, "BranchDetail">;
+
+type TabType = "stadiums" | "facilities";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const IMAGE_HEIGHT = 300;
 
 export function BranchDetailScreen({ route, navigation }: Props) {
+  const { t } = useTranslation();
   const { branchId } = route.params;
-  const { currentBranch, isLoading, error, fetchBranchById } = useBranchesStore();
+  const { currentBranch, isLoading, error, fetchBranchById } =
+    useBranchesStore();
   const insets = useSafeAreaInsets();
-
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
-  const bookingSheetRef = useRef<BottomSheet>(null);
-
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
+  const [activeTab, setActiveTab] = useState<TabType>("stadiums");
   useEffect(() => {
     fetchBranchById(branchId);
   }, [branchId]);
 
-  const dayOfWeek = getDayOfWeek(selectedDate);
-
-  const availableSlots = useMemo(() => {
-    if (!selectedVenue?.availability) return [];
-    const dayAvailability = selectedVenue.availability.find(
-      (a) => a.day === dayOfWeek && a.isOpen,
-    );
-    return dayAvailability?.slots || [];
-  }, [selectedVenue, dayOfWeek]);
-
-  const handleSlotSelect = (slot: Slot) => {
-    setSelectedSlot(slot);
-    bookingSheetRef.current?.expand();
+  const handleLocationPress = () => {
+    if (!currentBranch?.address) return;
+    const { latitude, longitude } = currentBranch.address;
+    if (latitude && longitude) {
+      const url = Platform.select({
+        ios: `maps:0,0?q=${latitude},${longitude}`,
+        android: `geo:${latitude},${longitude}?q=${latitude},${longitude}`,
+      });
+      if (url) Linking.openURL(url);
+    }
   };
 
-  const handleBookingSuccess = (reservationId: number) => {
-    bookingSheetRef.current?.close();
-    (navigation as any).navigate('BookingsTab', {
-      screen: 'ReservationDetail',
-      params: { reservationId },
-    });
+  const handleShare = async () => {
+    if (!currentBranch) return;
+    try {
+      await Share.share({
+        message: t('branch.shareMessage', { name: currentBranch.name }),
+      });
+    } catch {}
   };
 
   if (isLoading && !currentBranch) {
@@ -62,125 +72,343 @@ export function BranchDetailScreen({ route, navigation }: Props) {
   }
 
   if (error || !currentBranch) {
-    return <ErrorState message={error || 'Branch not found'} onRetry={() => fetchBranchById(branchId)} />;
+    return (
+      <ErrorState
+        message={error || t('branch.notFound')}
+        onRetry={() => fetchBranchById(branchId)}
+      />
+    );
   }
 
   const branch = currentBranch;
+  const venueCount = branch.venues?.length || 0;
+  const firstImage = branch.images?.[0];
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <ImageCarousel images={branch.images || []} height={260} />
+    <View style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      {/* Image pinned behind everything */}
+      <View style={styles.imageContainer}>
+        {firstImage ? (
+          <Image
+            source={{ uri: firstImage }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.imagePlaceholder]}>
+            <Ionicons name="football-outline" size={48} color={tc.textHint} />
+          </View>
+        )}
+      </View>
 
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { top: insets.top + 8 }]}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+      {/* Header buttons — float above image */}
+      <View style={[styles.headerButtons, { top: insets.top + 8 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={22} color="#FFF" />
         </TouchableOpacity>
+        <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
+          <Ionicons name="share-outline" size={20} color="#FFF" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.content}>
-          <Text style={styles.name}>{branch.name}</Text>
-
-          <View style={styles.metaRow}>
-            {branch.sport && (
-              <View style={styles.sportPill}>
-                <Text style={styles.sportText}>{branch.sport.name}</Text>
-              </View>
-            )}
-            {branch.address && (
-              <View style={styles.meta}>
-                <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.metaText}>
-                  {branch.address.street}, {branch.address.city}
-                </Text>
-              </View>
+      {/* Content slides up over the fixed image */}
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+        {/* Spacer so card starts at image bottom */}
+        <View style={{ height: IMAGE_HEIGHT - 24 }} />
+        <View style={[styles.contentCard, { backgroundColor: tc.screenBg }]}>
+          <BackgroundShapes isDark={isDark} />
+          {/* Branch name and venue count */}
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: tc.textPrimary }]}>
+              {branch.name}
+            </Text>
+            {venueCount > 0 && (
+              <Text style={styles.venueCount}>
+                {venueCount} {venueCount === 1 ? t('branch.stadium') : t('branch.stadiums')}
+              </Text>
             )}
           </View>
 
-          {branch.phone && (
-            <View style={styles.meta}>
-              <Ionicons name="call-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.metaText}>{branch.phone}</Text>
+          {/* Location */}
+          {branch.address && (
+            <View style={styles.locationRow}>
+              <Ionicons
+                name="location-outline"
+                size={16}
+                color={isDark ? colors.navyLight : colors.navy}
+              />
+              <Text style={[styles.locationText, { color: tc.textSecondary }]}>
+                {[
+                  branch.address.city,
+                  branch.address.state || branch.address.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </Text>
             </View>
           )}
 
-          {/* Facilities */}
-          {branch.facilities && branch.facilities.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Facilities</Text>
-              <FlatList
-                data={branch.facilities}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => <FacilityCard facility={item} />}
-              />
-            </View>
-          )}
+          {/* Location button */}
+          <TouchableOpacity
+            style={styles.locationBtn}
+            onPress={handleLocationPress}
+          >
+            <Ionicons
+              name="location-outline"
+              size={18}
+              color={isDark ? colors.navyLight : colors.navy}
+            />
+            <Text style={styles.locationBtnText}>{t('branch.location')}</Text>
+          </TouchableOpacity>
 
-          {/* Venues & Slots */}
-          {branch.venues && branch.venues.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Available Courts</Text>
+          {/* Tabs */}
+          <View style={[styles.tabs, { borderBottomColor: tc.border }]}>
+            <TouchableOpacity
+              onPress={() => setActiveTab("stadiums")}
+              style={[
+                styles.tab,
+                activeTab === "stadiums" && [
+                  styles.activeTab,
+                  { borderBottomColor: tc.textPrimary },
+                ],
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: tc.textHint },
+                  activeTab === "stadiums" && {
+                    color: tc.textPrimary,
+                    fontWeight: "700",
+                  },
+                ]}
+              >
+                {t('branch.stadiums')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab("facilities")}
+              style={[
+                styles.tab,
+                activeTab === "facilities" && [
+                  styles.activeTab,
+                  { borderBottomColor: tc.textPrimary },
+                ],
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: tc.textHint },
+                  activeTab === "facilities" && {
+                    color: tc.textPrimary,
+                    fontWeight: "700",
+                  },
+                ]}
+              >
+                {t('branch.facilities')}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-              {/* Venue selector */}
-              <FlatList
-                data={branch.venues}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.venueList}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedVenue(item);
-                      setSelectedSlot(null);
-                    }}
-                    style={[
-                      styles.venueTab,
-                      selectedVenue?.id === item.id && styles.selectedVenueTab,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.venueTabText,
-                        selectedVenue?.id === item.id && styles.selectedVenueTabText,
-                      ]}
-                    >
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-
-              {/* Date picker */}
-              <DatePicker selectedDate={selectedDate} onDateSelect={(d) => { setSelectedDate(d); setSelectedSlot(null); }} />
-
-              {/* Time slots */}
-              {selectedVenue ? (
-                <TimeSlotGrid
-                  slots={availableSlots}
-                  selectedSlotId={selectedSlot?.id || null}
-                  onSlotSelect={handleSlotSelect}
-                />
+          {/* Tab content */}
+          {activeTab === "stadiums" ? (
+            <View style={styles.tabContent}>
+              {branch.venues && branch.venues.length > 0 ? (
+                branch.venues.map((venue) => (
+                  <VenueListItem
+                    key={venue.id}
+                    venue={venue}
+                    onPress={() =>
+                      navigation.navigate("VenueDetail", { venueId: venue.id })
+                    }
+                  />
+                ))
               ) : (
-                <View style={styles.selectVenueHint}>
-                  <Text style={styles.hintText}>Select a court above to see available slots</Text>
+                <Text style={[styles.emptyText, { color: tc.textHint }]}>
+                  {t('branch.noStadiums')}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <View style={styles.facilitiesGrid}>
+              {branch.facilities && branch.facilities.length > 0 ? (
+                branch.facilities.map((facility) => (
+                  <FacilityGridItem key={facility.id} facility={facility} />
+                ))
+              ) : (
+                <View style={styles.emptyFacilities}>
+                  <Ionicons
+                    name="fitness-outline"
+                    size={40}
+                    color={tc.textHint}
+                  />
+                  <Text style={[styles.emptyText, { color: tc.textHint }]}>
+                    {t('branch.noFacilities')}
+                  </Text>
                 </View>
               )}
             </View>
           )}
+
+          <View style={{ height: 100 }} />
         </View>
       </ScrollView>
+    </View>
+  );
+}
 
-      <BookingBottomSheet
-        ref={bookingSheetRef}
-        venue={selectedVenue}
-        slot={selectedSlot}
-        selectedDate={selectedDate}
-        onSuccess={handleBookingSuccess}
-      />
+function VenueListItem({
+  venue,
+  onPress,
+}: {
+  venue: Venue;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const tc = useThemeColors();
+  const lowestPrice = venue.availability
+    ?.flatMap((a) => a.slots || [])
+    .reduce((min, slot) => (slot.price < min ? slot.price : min), Infinity);
+  const priceDisplay =
+    lowestPrice && lowestPrice !== Infinity
+      ? `${lowestPrice.toLocaleString()} $`
+      : null;
+  const venueTypeName = venue.venueTypes?.[0]?.name || null;
+
+  return (
+    <TouchableOpacity
+      style={[styles.venueCard, { backgroundColor: tc.cardBg }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {venue.images?.[0] ? (
+        <Image
+          source={{ uri: venue.images[0] }}
+          style={styles.venueImage}
+          contentFit="cover"
+        />
+      ) : (
+        <View
+          style={[
+            styles.venueImage,
+            styles.venueImagePlaceholder,
+            { backgroundColor: tc.surface },
+          ]}
+        >
+          <Ionicons name="football-outline" size={28} color={tc.textHint} />
+        </View>
+      )}
+      <View style={styles.venueInfo}>
+        <Text
+          style={[styles.venueName, { color: tc.textPrimary }]}
+          numberOfLines={1}
+        >
+          {venue.name}
+        </Text>
+        <View style={styles.venueMetaRow}>
+          <Ionicons name="people-outline" size={14} color={tc.textSecondary} />
+          <Text style={[styles.venueMetaText, { color: tc.textSecondary }]}>
+            {venue.playerCapacity} {t('branch.players')}
+          </Text>
+        </View>
+        {priceDisplay && (
+          <View style={styles.venueMetaRow}>
+            <Ionicons name="card-outline" size={14} color={tc.textSecondary} />
+            <Text style={[styles.venueMetaText, { color: tc.textSecondary }]}>
+              {priceDisplay}
+            </Text>
+          </View>
+        )}
+        {venueTypeName && (
+          <View style={styles.venueMetaRow}>
+            <Ionicons
+              name={
+                venueTypeName.toLowerCase().includes("indoor")
+                  ? "home-outline"
+                  : "sunny-outline"
+              }
+              size={14}
+              color={tc.textSecondary}
+            />
+            <Text style={[styles.venueMetaText, { color: tc.textSecondary }]}>
+              {venueTypeName}
+            </Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const FACILITY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  parking: "car-outline",
+  pool: "water-outline",
+  swimming: "water-outline",
+  gym: "barbell-outline",
+  shower: "water-outline",
+  locker: "lock-closed-outline",
+  cafe: "cafe-outline",
+  restaurant: "restaurant-outline",
+  wifi: "wifi-outline",
+  prayer: "moon-outline",
+  changing: "shirt-outline",
+  store: "storefront-outline",
+  shop: "storefront-outline",
+  medical: "medkit-outline",
+  first: "medkit-outline",
+};
+
+function getFacilityIcon(name: string): keyof typeof Ionicons.glyphMap {
+  const lower = name.toLowerCase();
+  for (const [key, icon] of Object.entries(FACILITY_ICONS)) {
+    if (lower.includes(key)) return icon;
+  }
+  return "cube-outline";
+}
+
+function FacilityGridItem({ facility }: { facility: Facility }) {
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
+  const hasImage = !!(facility.images?.[0] || facility.type?.image);
+  const imageUri = facility.images?.[0] || facility.type?.image;
+
+  return (
+    <View style={[styles.facilityCard, { backgroundColor: tc.cardBg }]}>
+      {hasImage ? (
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.facilityImage}
+          contentFit="cover"
+        />
+      ) : (
+        <View
+          style={[
+            styles.facilityIconWrap,
+            { backgroundColor: isDark ? 'rgba(19,36,82,0.5)' : `${colors.navy}12` },
+          ]}
+        >
+          <Ionicons
+            name={getFacilityIcon(facility.name)}
+            size={26}
+            color={isDark ? colors.navyLight : colors.navy}
+          />
+        </View>
+      )}
+      <Text
+        style={[styles.facilityName, { color: tc.textPrimary }]}
+        numberOfLines={2}
+      >
+        {facility.name}
+      </Text>
+      {facility.type && (
+        <Text
+          style={[styles.facilityType, { color: tc.textSecondary }]}
+          numberOfLines={1}
+        >
+          {facility.type.name}
+        </Text>
+      )}
     </View>
   );
 }
@@ -188,92 +416,183 @@ export function BranchDetailScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
-  backButton: {
-    position: 'absolute',
+  scrollView: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerButtons: {
+    position: "absolute",
     left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    right: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
     zIndex: 10,
   },
-  content: {
-    padding: spacing.screenPadding,
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageContainer: {
+    width: SCREEN_WIDTH,
+    height: IMAGE_HEIGHT,
+    overflow: "hidden",
+  },
+  imagePlaceholder: {
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contentCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+    paddingTop: 28,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  nameRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
   },
   name: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 12,
+    fontSize: 22,
+    fontWeight: "700",
+    flex: 1,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-    flexWrap: 'wrap',
+  venueCount: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.navy,
+    marginLeft: 12,
   },
-  sportPill: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  sportText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.white,
-  },
-  meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    marginBottom: 4,
+    marginBottom: 16,
   },
-  metaText: {
+  locationText: {
     fontSize: 14,
-    color: colors.textSecondary,
   },
-  section: {
-    marginTop: 24,
+  locationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.navy,
+    marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 12,
+  locationBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.navy,
   },
-  venueList: {
-    marginBottom: 4,
+  tabs: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    gap: 32,
   },
-  venueTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    marginRight: 8,
+  tab: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
   },
-  selectedVenueTab: {
-    backgroundColor: colors.primary,
+  activeTab: {
+    borderBottomWidth: 2,
   },
-  venueTabText: {
+  tabText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  tabContent: {
+    gap: 12,
+  },
+  emptyText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    textAlign: "center",
+    paddingVertical: 32,
   },
-  selectedVenueTabText: {
-    color: colors.white,
+  venueCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
+    padding: 10,
   },
-  selectVenueHint: {
-    padding: spacing.xl,
-    alignItems: 'center',
+  venueImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
   },
-  hintText: {
+  venueImagePlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  venueInfo: {
+    flex: 1,
+    marginLeft: 12,
+    gap: 4,
+  },
+  venueName: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  venueMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  venueMetaText: {
+    fontSize: 13,
+  },
+  facilitiesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  facilityCard: {
+    width: (SCREEN_WIDTH - spacing.screenPadding * 2 - 12) / 2,
+    borderRadius: 14,
+    padding: 12,
+    alignItems: "center",
+  },
+  facilityImage: {
+    width: "100%",
+    height: 80,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  facilityIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  facilityName: {
     fontSize: 14,
-    color: colors.textHint,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  facilityType: {
+    fontSize: 12,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  emptyFacilities: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 32,
+    gap: 8,
   },
 });

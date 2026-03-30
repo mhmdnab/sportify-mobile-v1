@@ -1,6 +1,8 @@
 import React from 'react';
 import { FlatList, TouchableOpacity, Text, View, StyleSheet } from 'react-native';
 import { colors } from '../../../theme/colors';
+import { useThemeColors } from '../../../theme/useThemeColors';
+import { useThemeStore } from '../../../stores/theme.store';
 import { spacing, radius } from '../../../theme/spacing';
 import { getNext14Days } from '../../../utils/date';
 
@@ -13,6 +15,9 @@ const days = getNext14Days();
 
 export function DatePicker({ selectedDate, onDateSelect }: DatePickerProps) {
   const selectedKey = selectedDate.toDateString();
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
+  const selectedBg = isDark ? colors.navyLight : colors.navy;
 
   return (
     <FlatList
@@ -26,10 +31,14 @@ export function DatePicker({ selectedDate, onDateSelect }: DatePickerProps) {
         return (
           <TouchableOpacity
             onPress={() => onDateSelect(item.date)}
-            style={[styles.item, isSelected && styles.selectedItem]}
+            style={[
+              styles.item,
+              { backgroundColor: tc.cardBg },
+              isSelected && { backgroundColor: selectedBg },
+            ]}
           >
-            <Text style={[styles.label, isSelected && styles.selectedText]}>{item.label}</Text>
-            <Text style={[styles.dayNum, isSelected && styles.selectedText]}>{item.dayNum}</Text>
+            <Text style={[styles.label, { color: tc.textSecondary }, isSelected && styles.selectedText]}>{item.label}</Text>
+            <Text style={[styles.dayNum, { color: tc.textPrimary }, isSelected && styles.selectedText]}>{item.dayNum}</Text>
           </TouchableOpacity>
         );
       }}
@@ -46,24 +55,18 @@ const styles = StyleSheet.create({
     width: 64,
     height: 72,
     borderRadius: radius.input,
-    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
-  selectedItem: {
-    backgroundColor: colors.primary,
-  },
   label: {
     fontSize: 12,
     fontWeight: '500',
-    color: colors.textSecondary,
     marginBottom: 4,
   },
   dayNum: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   selectedText: {
     color: colors.white,

@@ -3,15 +3,19 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { useThemeColors } from '../../theme/useThemeColors';
+import { useThemeStore } from '../../stores/theme.store';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { SkeletonList } from '../../components/ui/Skeleton';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 import { api } from '../../lib/api';
 import { PrivacyPolicy, PaginatedResponse } from '../../types/api';
 
 export function PrivacyScreen() {
   const navigation = useNavigation();
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
   const [policies, setPolicies] = useState<PrivacyPolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +38,13 @@ export function PrivacyScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={tc.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy Policy</Text>
+        <Text style={[styles.headerTitle, { color: tc.textPrimary }]}>Privacy Policy</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -53,8 +58,8 @@ export function PrivacyScreen() {
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           {policies.map((item) => (
             <View key={item.id} style={styles.section}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.content}>{item.content}</Text>
+              <Text style={[styles.title, { color: tc.textPrimary }]}>{item.title}</Text>
+              <Text style={[styles.content, { color: tc.textSecondary }]}>{item.content}</Text>
             </View>
           ))}
         </ScrollView>
@@ -64,7 +69,7 @@ export function PrivacyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -72,9 +77,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPadding,
     paddingVertical: spacing.md,
   },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary },
+  headerTitle: { fontSize: 18, fontWeight: '600' },
   scroll: { paddingHorizontal: spacing.screenPadding },
   section: { marginBottom: spacing.xl },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.sm },
-  content: { fontSize: 14, color: colors.textSecondary, lineHeight: 22 },
+  title: { fontSize: 18, fontWeight: '700', marginBottom: spacing.sm },
+  content: { fontSize: 14, lineHeight: 22 },
 });

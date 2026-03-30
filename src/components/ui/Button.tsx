@@ -8,6 +8,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { colors } from '../../theme/colors';
+import { useThemeStore } from '../../stores/theme.store';
 import { radius, sizes } from '../../theme/spacing';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -32,6 +33,24 @@ export function Button({
   textStyle,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+  const isDark = useThemeStore((s) => s.isDark);
+
+  const btnBg = isDark ? colors.navyLight : colors.navy;
+  const accentColor = isDark ? '#A0B4E0' : colors.navy;
+
+  const dynamicVariantStyles: Record<ButtonVariant, ViewStyle> = {
+    primary: { backgroundColor: btnBg },
+    secondary: { backgroundColor: isDark ? colors.navyMid : colors.surface },
+    outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: accentColor },
+    ghost: { backgroundColor: 'transparent' },
+  };
+
+  const dynamicTextStyles: Record<ButtonVariant, TextStyle> = {
+    primary: { color: colors.white },
+    secondary: { color: isDark ? '#EEF0F6' : colors.textPrimary },
+    outline: { color: accentColor },
+    ghost: { color: accentColor },
+  };
 
   return (
     <TouchableOpacity
@@ -40,21 +59,21 @@ export function Button({
       activeOpacity={0.8}
       style={[
         styles.base,
-        variantStyles[variant],
+        dynamicVariantStyles[variant],
         isDisabled && styles.disabled,
         style,
       ]}
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? colors.white : colors.primary}
+          color={variant === 'primary' ? colors.white : accentColor}
           size="small"
         />
       ) : (
         <Text
           style={[
             styles.text,
-            variantTextStyles[variant],
+            dynamicTextStyles[variant],
             textStyle,
           ]}
         >
@@ -81,35 +100,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
-const variantStyles: Record<ButtonVariant, ViewStyle> = {
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.surface,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-};
-
-const variantTextStyles: Record<ButtonVariant, TextStyle> = {
-  primary: {
-    color: colors.white,
-  },
-  secondary: {
-    color: colors.textPrimary,
-  },
-  outline: {
-    color: colors.primary,
-  },
-  ghost: {
-    color: colors.primary,
-  },
-};

@@ -6,15 +6,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Avatar } from '../../components/ui/Avatar';
-import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { useThemeColors } from '../../theme/useThemeColors';
+import { useThemeStore } from '../../stores/theme.store';
 import { useAuthStore } from '../../stores/auth.store';
 import { api } from '../../lib/api';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 
 export function EditProfileScreen() {
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
 
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -35,12 +39,13 @@ export function EditProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={tc.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={[styles.headerTitle, { color: tc.textPrimary }]}>Edit Profile</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -80,7 +85,6 @@ export function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -92,7 +96,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   avatarSection: {
     alignItems: 'center',

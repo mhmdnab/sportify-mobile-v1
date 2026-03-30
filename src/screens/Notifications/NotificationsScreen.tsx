@@ -3,16 +3,21 @@ import { FlatList, StyleSheet, RefreshControl, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
+import { useThemeColors } from '../../theme/useThemeColors';
+import { useThemeStore } from '../../stores/theme.store';
 import { spacing } from '../../theme/spacing';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useNotificationsStore } from '../../stores/notifications.store';
 import { NotificationItem } from './components/NotificationItem';
 import { NotificationsSkeleton } from './components/NotificationsSkeleton';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 
 export function NotificationsScreen() {
   const { notifications, isLoading, error, fetchNotifications, fetchMoreNotifications } = useNotificationsStore();
   const [refreshing, setRefreshing] = React.useState(false);
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
 
   useFocusEffect(
     useCallback(() => {
@@ -27,8 +32,9 @@ export function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Notifications</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
+      <Text style={[styles.title, { color: tc.textPrimary }]}>Notifications</Text>
 
       {isLoading && notifications.length === 0 ? (
         <NotificationsSkeleton />
@@ -47,7 +53,7 @@ export function NotificationsScreen() {
           showsVerticalScrollIndicator={false}
           onEndReached={fetchMoreNotifications}
           onEndReachedThreshold={0.5}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.navy} />}
           renderItem={({ item }) => (
             <NotificationItem notification={item} onPress={() => {}} />
           )}
@@ -60,12 +66,10 @@ export function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.textPrimary,
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,

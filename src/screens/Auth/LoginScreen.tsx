@@ -1,34 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Dimensions,
+  StatusBar,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper } from '../../components/ui/ScreenWrapper';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
-import { Divider } from '../../components/ui/Divider';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
 import { useAuthStore } from '../../stores/auth.store';
 import { isValidEmail } from '../../utils/validation';
-import { AuthStackParamList, RootStackParamList } from '../../types/navigation';
+import { AuthStackParamList } from '../../types/navigation';
+
+const { height } = Dimensions.get('window');
 
 type AuthNav = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export function LoginScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<AuthNav>();
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
-    if (!email) newErrors.email = 'Email is required';
-    else if (!isValidEmail(email)) newErrors.email = 'Invalid email address';
-    if (!password) newErrors.password = 'Password is required';
+    if (!email) newErrors.email = t('auth.emailRequired');
+    else if (!isValidEmail(email)) newErrors.email = t('auth.invalidEmail');
+    if (!password) newErrors.password = t('auth.passwordRequired');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -37,129 +50,265 @@ export function LoginScreen() {
     if (!validate()) return;
     try {
       await login({ email, password });
-      (navigation as any).reset({ index: 0, routes: [{ name: 'App' }] });
+      const currentUser = useAuthStore.getState().user;
+      const target = currentUser?.owner ? 'OwnerApp' : 'App';
+      (navigation as any).reset({ index: 0, routes: [{ name: target }] });
     } catch (error: any) {
       Alert.alert(
-        'Login Failed',
-        error?.response?.data?.message || 'Invalid credentials. Please try again.',
+        t('auth.loginFailed'),
+        error?.response?.data?.message || t('auth.invalidCredentials'),
       );
     }
   };
 
   return (
-    <ScreenWrapper scroll>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* Navy Header with Logo */}
+      <LinearGradient
+        colors={[colors.navyDark, colors.navy, colors.navyMid]}
+        style={styles.header}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      >
+        <View style={styles.logoContainer}>
+          <Ionicons name="fitness" size={48} color={colors.white} />
+          <Text style={styles.logoText}>SPORTIFY</Text>
+        </View>
+      </LinearGradient>
+
+      {/* White Form Area */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
+        style={styles.formArea}
       >
-        <View style={styles.header}>
-          <Ionicons name="football" size={48} color={colors.primary} />
-          <Text style={styles.logo}>Sportify</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>{t('auth.login')}</Text>
 
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to continue booking</Text>
+          {/* Username/Email Field */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>{t('auth.username')}</Text>
+            <TextInput
+              style={[styles.fieldInput, errors.email ? styles.fieldInputError : null]}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholderTextColor={colors.textHint}
+            />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          </View>
 
-        <View style={styles.form}>
-          <Input
-            label="Email"
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            leftIcon="mail-outline"
-            error={errors.email}
-          />
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            leftIcon="lock-closed-outline"
-            error={errors.password}
-          />
+          {/* Password Field */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
+            <View style={[styles.passwordWrap, errors.password ? styles.fieldInputError : null]}>
+              <TextInput
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholderTextColor={colors.textHint}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  color={colors.textHint}
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+          </View>
 
+          {/* Forgot Password */}
           <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
 
-          <Button title="Sign In" onPress={handleLogin} loading={isLoading} />
-
-          <Divider text="or continue with" />
-
-          <Button
-            title="Continue with Google"
-            onPress={() => {}}
-            variant="outline"
-          />
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.footerLink}>Register</Text>
+          {/* Login Button */}
+          <TouchableOpacity
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.loginButtonText}>
+              {isLoading ? t('auth.signingIn') : t('auth.login')}
+            </Text>
           </TouchableOpacity>
-        </View>
+
+          {/* Sign up link */}
+          <View style={styles.signupRow}>
+            <Text style={styles.signupText}>{t('auth.noAccount')}</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.signupLink}>{t('auth.signup')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t('auth.or')}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Google Login */}
+          <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
+            <Ionicons name="logo-google" size={20} color={colors.navy} />
+            <Text style={styles.googleButtonText}>{t('auth.loginWithGoogle')}</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </KeyboardAvoidingView>
-    </ScreenWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    backgroundColor: colors.white,
   },
   header: {
+    height: height * 0.28,
     alignItems: 'center',
-    marginBottom: 32,
-    flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    paddingTop: 40,
   },
-  logo: {
-    fontSize: 28,
+  logoContainer: {
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 22,
     fontWeight: '800',
-    color: colors.primary,
+    color: colors.white,
+    letterSpacing: 3,
+    marginTop: 8,
+  },
+  formArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 32,
+    paddingTop: 30,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.navy,
+    fontStyle: 'italic',
+    marginBottom: 28,
+  },
+  fieldContainer: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: 32,
+  fieldInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: colors.textPrimary,
   },
-  form: {
+  fieldInputError: {
+    borderBottomColor: colors.error,
+  },
+  passwordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  passwordInput: {
     flex: 1,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 4,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: spacing.xl,
-    marginTop: -spacing.sm,
+    marginBottom: 24,
+    marginTop: 4,
   },
   forgotPasswordText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingVertical: spacing.xl,
-  },
-  footerText: {
-    fontSize: 15,
+    fontSize: 13,
     color: colors.textSecondary,
   },
-  footerLink: {
+  loginButton: {
+    backgroundColor: colors.navy,
+    paddingVertical: 15,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  signupRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  signupText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  signupLink: {
+    fontSize: 13,
+    color: colors.navy,
+    fontWeight: '700',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: colors.textHint,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    borderColor: colors.navy,
+    gap: 10,
+  },
+  googleButtonText: {
     fontSize: 15,
-    color: colors.primary,
     fontWeight: '600',
+    color: colors.navy,
   },
 });

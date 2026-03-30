@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   focused: {
-    borderColor: colors.primary,
+    borderColor: colors.navy,
     backgroundColor: colors.white,
   },
   errorBorder: {

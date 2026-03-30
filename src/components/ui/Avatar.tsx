@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   fallback: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,23 +1,61 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Switch, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { colors } from '../../theme/colors';
+import { useThemeColors } from '../../theme/useThemeColors';
 import { spacing } from '../../theme/spacing';
 import { useAuthStore } from '../../stores/auth.store';
+import { useThemeStore } from '../../stores/theme.store';
 import { ProfileStackParamList } from '../../types/navigation';
+import { useTranslation } from 'react-i18next';
+import { useUIStore } from '../../stores/ui.store';
+import { useLanguageStore } from '../../stores/language.store';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
+import { pickAndUploadImage } from '../../lib/upload';
+import { api } from '../../lib/api';
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList, 'ProfileScreen'>;
 
-const DARK_NAV = '#1A1A2E';
+const AVATAR_SIZE = 120;
 
 export function ProfileScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const openNotifications = useUIStore((s) => s.openNotifications);
+  const isDark = useThemeStore((s) => s.isDark);
+  const { locale, setLocale } = useLanguageStore();
+  const toggleDarkMode = useThemeStore((s) => s.toggleDarkMode);
+  const tc = useThemeColors();
+
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshProfile();
+    setRefreshing(false);
+  };
+
+  const handleAvatarUpload = async () => {
+    try {
+      setUploadingAvatar(true);
+      const url = await pickAndUploadImage();
+      if (url) {
+        await api.put('/users/profile', { image: url });
+        await refreshProfile();
+      }
+    } catch {}
+    finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -28,135 +66,172 @@ export function ProfileScreen() {
     ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
+  const headerBg = isDark ? '#040B1E' : colors.navy;
+
+  const cardBg = tc.cardBg;
+  const textColor = tc.textPrimary;
+  const subTextColor = tc.textSecondary;
+
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Dark header */}
-        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={24} color={colors.white} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Profile</Text>
-            <View style={{ width: 24 }} />
-          </View>
-        </SafeAreaView>
-        <View style={styles.headerBg} />
+    <View style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
 
-        {/* Avatar overlapping header */}
-        <View style={styles.avatarWrapper}>
-          <View style={styles.avatarBorder}>
-            {user?.image ? (
-              <Image source={{ uri: user.image }} style={styles.avatarImage} contentFit="cover" />
-            ) : (
-              <View style={[styles.avatarImage, styles.avatarFallback]}>
-                <Text style={styles.avatarInitials}>{initials}</Text>
-              </View>
-            )}
-          </View>
-          <TouchableOpacity style={styles.cameraBtn}>
-            <Ionicons name="camera" size={14} color={colors.white} />
+      {/* Fixed header — title + curve + avatar all together */}
+      <SafeAreaView edges={['top']} style={{ backgroundColor: headerBg }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('profile.profile')}</Text>
+          <View style={{ width: 24 }} />
         </View>
+      </SafeAreaView>
+      <View style={[styles.headerBg, { backgroundColor: headerBg }]} />
+      <View style={styles.avatarWrapper}>
+        <View style={[styles.avatarBorder, { borderColor: cardBg, backgroundColor: cardBg }]}>
+          {user?.image ? (
+            <Image source={{ uri: user.image }} style={styles.avatarImage} contentFit="cover" />
+          ) : (
+            <View style={[styles.avatarImage, styles.avatarFallback]}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity style={styles.cameraBtn} onPress={handleAvatarUpload} disabled={uploadingAvatar}>
+          <Ionicons name={uploadingAvatar ? 'hourglass-outline' : 'camera'} size={14} color="#FFF" />
+        </TouchableOpacity>
+      </View>
 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.navy} />}
+      >
         {/* General Information */}
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: cardBg }]}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="information-circle-outline" size={20} color={DARK_NAV} />
-              <Text style={styles.sectionTitle}>General Information</Text>
+              <Ionicons name="information-circle-outline" size={20} color={textColor} />
+              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.generalInfo')}</Text>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('EditProfile')}>
-              <Ionicons name="pencil-outline" size={20} color={DARK_NAV} />
+              <Ionicons name="pencil-outline" size={20} color={textColor} />
             </TouchableOpacity>
           </View>
           <View style={styles.sectionContent}>
-            <InfoRow label="Username" value={user?.name || 'User'} />
-            <InfoRow label="E-mail" value={user?.email || '-'} />
-            <InfoRow label="Phone number" value={user?.phone || '-'} />
+            <InfoRow label={t('profile.username')} value={user?.name || t('common.user')} textColor={textColor} subColor={subTextColor} />
+            <InfoRow label={t('profile.email')} value={user?.email || '-'} textColor={textColor} subColor={subTextColor} />
+            <InfoRow label={t('profile.phone')} value={user?.phone || '-'} textColor={textColor} subColor={subTextColor} />
           </View>
         </View>
 
         {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <QuickAction icon="heart-outline" label="Favorite" onPress={() => {}} />
-          <QuickAction icon="calendar-outline" label="Reservation" onPress={() => (navigation as any).navigate('BookingsTab')} />
-          <QuickAction icon="notifications-outline" label="Notification" onPress={() => {}} />
+        <View style={[styles.quickActions, { backgroundColor: cardBg }]}>
+          <QuickAction icon="heart-outline" label={t('profile.favorite')} onPress={() => {}} color={textColor} />
+          <QuickAction icon="calendar-outline" label={t('profile.reservation')} onPress={() => (navigation as any).navigate('BookingsTab')} color={textColor} />
+          <QuickAction icon="notifications-outline" label={t('profile.notification')} onPress={openNotifications} color={textColor} />
         </View>
 
-        {/* Social Media */}
-        <View style={styles.section}>
+        {/* Appearance */}
+        <View style={[styles.section, { backgroundColor: cardBg }]}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="globe-outline" size={20} color={DARK_NAV} />
-              <Text style={styles.sectionTitle}>Social Media</Text>
+              <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={20} color={textColor} />
+              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.appearance')}</Text>
             </View>
-            <TouchableOpacity>
-              <Ionicons name="pencil-outline" size={20} color={DARK_NAV} />
-            </TouchableOpacity>
           </View>
-          <View style={styles.sectionContent}>
-            <InfoRow label="Instagram" value="url" />
-            <InfoRow label="Facebook" value="url" />
-            <InfoRow label="TikTok" value="-" />
+          <View style={styles.darkModeRow}>
+            <View style={styles.darkModeInfo}>
+              <Text style={[styles.infoLabel, { color: textColor }]}>{t('profile.darkMode')}</Text>
+              <Text style={[styles.infoValue, { color: subTextColor }]}>
+                {isDark ? t('profile.on') : t('profile.off')}
+              </Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleDarkMode}
+              trackColor={{ false: '#D1D1D6', true: colors.navy }}
+              thumbColor="#FFF"
+              ios_backgroundColor="#D1D1D6"
+            />
+          </View>
+        </View>
+
+        {/* Language */}
+        <View style={[styles.section, { backgroundColor: cardBg }]}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="language-outline" size={20} color={textColor} />
+              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.language')}</Text>
+            </View>
+          </View>
+          <View style={styles.languageRow}>
+            <TouchableOpacity
+              style={[styles.languageOption, locale === 'en' && styles.languageOptionActive]}
+              onPress={() => setLocale('en')}
+            >
+              <Text style={[styles.languageText, locale === 'en' && styles.languageTextActive]}>
+                {t('profile.english')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.languageOption, locale === 'ar' && styles.languageOptionActive]}
+              onPress={() => setLocale('ar')}
+            >
+              <Text style={[styles.languageText, locale === 'ar' && styles.languageTextActive]}>
+                {t('profile.arabic')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Security Information */}
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: cardBg }]}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="lock-closed-outline" size={20} color={DARK_NAV} />
-              <Text style={styles.sectionTitle}>Security Information</Text>
+              <Ionicons name="lock-closed-outline" size={20} color={textColor} />
+              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.securityInfo')}</Text>
             </View>
           </View>
           <View style={styles.sectionContent}>
             <TouchableOpacity>
-              <Text style={styles.infoLabel}>change password</Text>
+              <Text style={[styles.infoLabel, { color: textColor }]}>{t('profile.changePassword')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutSection} onPress={handleLogout}>
+        <TouchableOpacity style={[styles.logoutSection, { backgroundColor: cardBg }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, textColor, subColor }: { label: string; value: string; textColor: string; subColor: string }) {
   return (
     <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <Text style={[styles.infoLabel, { color: textColor }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: subColor }]}>{value}</Text>
     </View>
   );
 }
 
-function QuickAction({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+function QuickAction({ icon, label, onPress, color }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; color: string }) {
   return (
     <TouchableOpacity style={styles.quickActionItem} onPress={onPress}>
-      <Ionicons name={icon} size={20} color={DARK_NAV} />
-      <Text style={styles.quickActionLabel}>{label}</Text>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={[styles.quickActionLabel, { color }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-const AVATAR_SIZE = 120;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F0F5',
-  },
-  headerSafeArea: {
-    backgroundColor: DARK_NAV,
-    zIndex: 2,
   },
   header: {
     flexDirection: 'row',
@@ -171,11 +246,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.white,
+    color: '#FFF',
   },
   headerBg: {
     height: 60,
-    backgroundColor: DARK_NAV,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     marginTop: -1,
@@ -191,10 +265,8 @@ const styles = StyleSheet.create({
     height: AVATAR_SIZE + 8,
     borderRadius: (AVATAR_SIZE + 8) / 2,
     borderWidth: 4,
-    borderColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
   },
   avatarImage: {
     width: AVATAR_SIZE,
@@ -202,12 +274,12 @@ const styles = StyleSheet.create({
     borderRadius: AVATAR_SIZE / 2,
   },
   avatarFallback: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
-    color: colors.white,
+    color: '#FFF',
     fontSize: 40,
     fontWeight: '700',
   },
@@ -223,12 +295,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   section: {
-    backgroundColor: colors.white,
     marginHorizontal: spacing.screenPadding,
     borderRadius: 16,
     marginBottom: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: DARK_NAV,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -246,7 +326,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: DARK_NAV,
   },
   sectionContent: {
     paddingHorizontal: 16,
@@ -258,22 +337,40 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: DARK_NAV,
   },
   infoValue: {
     fontSize: 14,
-    color: colors.textSecondary,
     marginTop: 2,
+  },
+  darkModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  darkModeInfo: {
+    gap: 2,
   },
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 24,
     marginHorizontal: spacing.screenPadding,
-    backgroundColor: colors.white,
     borderRadius: 16,
     paddingVertical: 16,
     marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   quickActionItem: {
     flexDirection: 'row',
@@ -283,23 +380,57 @@ const styles = StyleSheet.create({
   quickActionLabel: {
     fontSize: 13,
     fontWeight: '500',
-    color: DARK_NAV,
   },
   logoutSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginHorizontal: spacing.screenPadding,
-    backgroundColor: colors.white,
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.error,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.error,
+  },
+  languageRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  languageOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  languageOptionActive: {
+    borderColor: colors.navy,
+    backgroundColor: `${colors.navy}10`,
+  },
+  languageText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  languageTextActive: {
+    color: colors.navy,
+    fontWeight: '700',
   },
 });

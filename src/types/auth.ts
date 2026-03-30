@@ -10,7 +10,10 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phone?: string;
+  phoneCountryCode?: string;
   image?: string;
+  gender?: 'MALE' | 'FEMALE';
+  dateOfBirth?: string;
   address?: Omit<Address, 'id'>;
 }
 

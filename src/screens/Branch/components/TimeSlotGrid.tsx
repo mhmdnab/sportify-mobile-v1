@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors } from '../../../theme/colors';
+import { useThemeColors } from '../../../theme/useThemeColors';
+import { useThemeStore } from '../../../stores/theme.store';
 import { spacing, radius } from '../../../theme/spacing';
 import { Slot } from '../../../types/api';
 import { formatTime } from '../../../utils/date';
@@ -13,10 +15,14 @@ interface TimeSlotGridProps {
 }
 
 export function TimeSlotGrid({ slots, selectedSlotId, onSlotSelect }: TimeSlotGridProps) {
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
+  const accentColor = isDark ? colors.navyLight : colors.navy;
+
   if (slots.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyText}>No slots available for this day</Text>
+        <Text style={[styles.emptyText, { color: tc.textHint }]}>No slots available for this day</Text>
       </View>
     );
   }
@@ -29,13 +35,17 @@ export function TimeSlotGrid({ slots, selectedSlotId, onSlotSelect }: TimeSlotGr
           <TouchableOpacity
             key={slot.id}
             onPress={() => onSlotSelect(slot)}
-            style={[styles.slot, isSelected && styles.selectedSlot]}
+            style={[
+              styles.slot,
+              { backgroundColor: tc.cardBg, borderColor: accentColor },
+              isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+            ]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.time, isSelected && styles.selectedText]}>
+            <Text style={[styles.time, { color: tc.textPrimary }, isSelected && styles.selectedText]}>
               {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
             </Text>
-            <Text style={[styles.price, isSelected && styles.selectedText]}>
+            <Text style={[styles.price, { color: accentColor }, isSelected && styles.selectedText]}>
               {formatPrice(slot.price)}
             </Text>
           </TouchableOpacity>
@@ -54,27 +64,19 @@ const styles = StyleSheet.create({
   },
   slot: {
     width: '31%',
-    backgroundColor: colors.white,
     borderWidth: 1.5,
-    borderColor: colors.primary,
     borderRadius: radius.input,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  selectedSlot: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
   time: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: 2,
   },
   price: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.primary,
   },
   selectedText: {
     color: colors.white,
@@ -85,6 +87,5 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: colors.textHint,
   },
 });

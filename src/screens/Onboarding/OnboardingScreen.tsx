@@ -1,146 +1,153 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  FlatList,
-  Dimensions,
   StyleSheet,
+  Dimensions,
+  StatusBar,
+  ImageBackground,
   TouchableOpacity,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
-import { DotIndicator } from '../../components/ui/DotIndicator';
-import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../stores/auth.store';
-import { onboardingSlides } from '../../constants/onboarding';
 import { RootStackParamList } from '../../types/navigation';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
 
 export function OnboardingScreen() {
   const navigation = useNavigation<Nav>();
   const markOnboarded = useAuthStore((s) => s.markOnboarded);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / width);
-    setActiveIndex(index);
-  };
-
-  const handleNext = () => {
-    if (activeIndex < onboardingSlides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: activeIndex + 1 });
-    } else {
-      handleFinish();
-    }
-  };
-
-  const handleFinish = async () => {
+  const handleGetStarted = async () => {
     await markOnboarded();
     navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleFinish}>
-          <Text style={styles.skip}>Skip</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      <FlatList
-        ref={flatListRef}
-        data={onboardingSlides}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.slide}>
-            <View style={styles.iconCircle}>
-              <Ionicons name={item.icon} size={64} color={colors.primary} />
-            </View>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.subtitle}>{item.subtitle}</Text>
+      <LinearGradient
+        colors={[colors.navyDark, colors.navy, colors.navyLight]}
+        style={styles.background}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      >
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <View style={styles.logoIcon}>
+            <Ionicons name="fitness" size={56} color={colors.white} />
           </View>
-        )}
-      />
-
-      <View style={styles.footer}>
-        <DotIndicator count={onboardingSlides.length} activeIndex={activeIndex} />
-        <View style={styles.buttonContainer}>
-          <Button
-            title={activeIndex === onboardingSlides.length - 1 ? 'Get Started' : 'Next'}
-            onPress={handleNext}
-          />
         </View>
-      </View>
-    </SafeAreaView>
+
+        {/* Welcome Text */}
+        <View style={styles.textContainer}>
+          <Text style={styles.welcomeText}>Welcome to</Text>
+          <Text style={styles.brandName}>SPORTIFY</Text>
+          <Text style={styles.description}>
+            Experience sports like never before by Discover the perfect coach to unlock your full
+            potential and Reserving top-notch stadiums and facilities for your next game
+          </Text>
+        </View>
+
+        {/* Decorative curve */}
+        <View style={styles.curveContainer}>
+          <View style={styles.curve} />
+        </View>
+
+        {/* Get Started Button */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.getStartedButton} onPress={handleGetStarted}>
+            <Text style={styles.getStartedText}>Get Started</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: spacing.screenPadding,
-    paddingTop: spacing.sm,
+  background: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: height * 0.1,
+    paddingBottom: height * 0.06,
   },
-  skip: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    fontWeight: '500',
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 20,
   },
-  slide: {
-    width,
+  logoIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
   },
-  iconCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.surface,
+  textContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 40,
+    paddingHorizontal: 40,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 16,
+  welcomeText: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.8)',
+    fontStyle: 'italic',
+    marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
+  brandName: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.white,
+    letterSpacing: 4,
+    marginBottom: 20,
+  },
+  description: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     lineHeight: 24,
   },
-  footer: {
-    paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.xl,
-    alignItems: 'center',
+  curveContainer: {
+    width: width,
+    height: 60,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  curve: {
+    width: width * 2,
+    height: width * 2,
+    borderRadius: width,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    position: 'absolute',
+    bottom: -width * 2 + 60,
+    left: -width / 2,
   },
   buttonContainer: {
     width: '100%',
-    marginTop: spacing.xl,
+    paddingHorizontal: 60,
+  },
+  getStartedButton: {
+    backgroundColor: colors.navyDark,
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  getStartedText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });

@@ -104,7 +104,7 @@ export const useReservationsStore = create<ReservationsState>((set, get) => ({
   cancelReservation: async (id: number) => {
     set({ isLoading: true, error: null });
     try {
-      await api.put(`/reservations/${id}`, { status: 'CANCELLED' });
+      await api.put(`/reservations/${id}/cancel`);
       set((state) => ({
         reservations: state.reservations.map((r) =>
           r.id === id ? { ...r, status: 'CANCELLED' as any } : r,

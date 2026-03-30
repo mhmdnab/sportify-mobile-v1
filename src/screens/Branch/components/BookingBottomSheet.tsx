@@ -120,7 +120,7 @@ const summaryStyles = StyleSheet.create({
     color: colors.textPrimary,
   },
   highlight: {
-    color: colors.primary,
+    color: colors.navy,
     fontSize: 16,
     fontWeight: '700',
   },

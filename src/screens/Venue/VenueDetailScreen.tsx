@@ -1,28 +1,65 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Linking,
+  Share,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImageCarousel } from '../../components/ui/ImageCarousel';
-import { Chip } from '../../components/ui/Chip';
-import { Button } from '../../components/ui/Button';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { SkeletonCard, SkeletonList } from '../../components/ui/Skeleton';
 import { colors } from '../../theme/colors';
+import { useThemeColors } from '../../theme/useThemeColors';
+import { useThemeStore } from '../../stores/theme.store';
 import { spacing } from '../../theme/spacing';
 import { useVenuesStore } from '../../stores/venues.store';
+import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 import { HomeStackParamList } from '../../types/navigation';
+import { useTranslation } from 'react-i18next';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'VenueDetail'>;
 
 export function VenueDetailScreen({ route, navigation }: Props) {
+  const { t } = useTranslation();
   const { venueId } = route.params;
   const { currentVenue, isLoading, error, fetchVenueById } = useVenuesStore();
   const insets = useSafeAreaInsets();
+  const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
 
   useEffect(() => {
     fetchVenueById(venueId);
   }, [venueId]);
+
+  const handleLocationPress = () => {
+    if (!currentVenue?.branch?.address) return;
+    const { latitude, longitude } = currentVenue.branch.address;
+    if (latitude && longitude) {
+      const url = Platform.select({
+        ios: `maps:0,0?q=${latitude},${longitude}`,
+        android: `geo:${latitude},${longitude}?q=${latitude},${longitude}`,
+      });
+      if (url) Linking.openURL(url);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!currentVenue) return;
+    try {
+      await Share.share({ message: t('venue.shareMessage', { name: currentVenue.name }) });
+    } catch {}
+  };
+
+  const handleBookNow = () => {
+    navigation.navigate('Reservation', { venueId });
+  };
 
   if (isLoading && !currentVenue) {
     return (
@@ -36,98 +73,84 @@ export function VenueDetailScreen({ route, navigation }: Props) {
   }
 
   if (error || !currentVenue) {
-    return <ErrorState message={error || 'Venue not found'} onRetry={() => fetchVenueById(venueId)} />;
+    return <ErrorState message={error || t('venue.notFound')} onRetry={() => fetchVenueById(venueId)} />;
   }
 
   const venue = currentVenue;
+  const venueTypeName = venue.venueTypes?.[0]?.name || null;
+  const lowestPrice = venue.availability
+    ?.flatMap((a) => a.slots || [])
+    .reduce((min, slot) => (slot.price < min ? slot.price : min), Infinity);
+  const priceDisplay = lowestPrice && lowestPrice !== Infinity
+    ? `${lowestPrice.toLocaleString()} L.L/h`
+    : null;
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <ImageCarousel images={venue.images || []} height={280} />
+    <View style={[styles.container, { backgroundColor: tc.screenBg }]}>
+      <BackgroundShapes isDark={isDark} />
 
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { top: insets.top + 8 }]}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+      {/* Fixed image */}
+      <ImageCarousel images={venue.images || []} height={280} />
+
+      {/* Header buttons — fixed over image */}
+      <View style={[styles.headerButtons, { top: insets.top + 8 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={22} color={colors.white} />
         </TouchableOpacity>
+        <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
+          <Ionicons name="share-outline" size={20} color={colors.white} />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.content}>
-          <Text style={styles.name}>{venue.name}</Text>
+      <View style={styles.content}>
+          <Text style={[styles.name, { color: tc.textPrimary }]}>{venue.name}</Text>
 
-          <View style={styles.metaRow}>
-            <View style={styles.meta}>
-              <Ionicons name="people-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.metaText}>{venue.playerCapacity} players</Text>
+          {/* Location */}
+          {venue.branch?.address && (
+            <View style={styles.metaRow}>
+              <Ionicons name="location-outline" size={16} color={isDark ? colors.navyLight : colors.navy} />
+              <Text style={[styles.metaText, { color: tc.textSecondary }]}>
+                {[venue.branch.address.city, venue.branch.address.state || venue.branch.address.country]
+                  .filter(Boolean)
+                  .join(', ')}
+              </Text>
             </View>
-            {venue.branch?.address && (
-              <View style={styles.meta}>
-                <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.metaText}>{venue.branch.address.city}</Text>
-              </View>
-            )}
+          )}
+
+          {/* Players */}
+          <View style={styles.metaRow}>
+            <Ionicons name="people-outline" size={16} color={tc.textSecondary} />
+            <Text style={[styles.metaText, { color: tc.textSecondary }]}>{venue.playerCapacity} {t('venue.players')}</Text>
           </View>
 
-          {venue.venueTypes && venue.venueTypes.length > 0 && (
-            <View style={styles.chips}>
-              {venue.venueTypes.map((type) => (
-                <Chip key={type.id} label={type.name} />
-              ))}
+          {/* Price */}
+          {priceDisplay && (
+            <View style={styles.metaRow}>
+              <Ionicons name="card-outline" size={16} color={tc.textSecondary} />
+              <Text style={[styles.metaText, { color: tc.textSecondary }]}>{priceDisplay}</Text>
             </View>
           )}
 
-          {venue.branch && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Branch</Text>
-              <TouchableOpacity
-                style={styles.branchCard}
-                onPress={() => navigation.navigate('BranchDetail', { branchId: venue.branch!.id })}
-              >
-                <View style={styles.branchInfo}>
-                  <Text style={styles.branchName}>{venue.branch.name}</Text>
-                  {venue.branch.sport && (
-                    <Text style={styles.branchSport}>{venue.branch.sport.name}</Text>
-                  )}
-                  {venue.branch.address && (
-                    <Text style={styles.branchAddress}>
-                      {venue.branch.address.street}, {venue.branch.address.city}
-                    </Text>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textHint} />
-              </TouchableOpacity>
+          {/* Indoor/Outdoor */}
+          {venueTypeName && (
+            <View style={styles.metaRow}>
+              <Ionicons name="grid-outline" size={16} color={tc.textSecondary} />
+              <Text style={[styles.metaText, { color: tc.textSecondary }]}>{venueTypeName}</Text>
             </View>
           )}
 
-          {venue.availability && venue.availability.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Availability</Text>
-              {venue.availability
-                .filter((a) => a.isOpen)
-                .map((a) => (
-                  <View key={a.id} style={styles.availabilityRow}>
-                    <Text style={styles.dayText}>
-                      {a.day.charAt(0) + a.day.slice(1).toLowerCase()}
-                    </Text>
-                    <Text style={styles.timeText}>
-                      {a.startTime} - {a.endTime}
-                    </Text>
-                  </View>
-                ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+          {/* Book Now button */}
+          <TouchableOpacity style={[styles.bookBtn, { backgroundColor: isDark ? colors.navyLight : colors.navy }]} onPress={handleBookNow} activeOpacity={0.8}>
+            <Text style={styles.bookBtnText}>{t('venue.bookNow')}</Text>
+          </TouchableOpacity>
 
-      {venue.branch && (
-        <View style={[styles.stickyBottom, { paddingBottom: insets.bottom || spacing.lg }]}>
-          <Button
-            title="View Branch & Book"
-            onPress={() => navigation.navigate('BranchDetail', { branchId: venue.branch!.id })}
-          />
-        </View>
-      )}
+          {/* Location button */}
+          <TouchableOpacity style={[styles.locationBtn, { borderColor: isDark ? colors.navyLight : colors.navy }]} onPress={handleLocationPress}>
+            <Ionicons name="location-outline" size={18} color={isDark ? colors.navyLight : colors.navy} />
+            <Text style={[styles.locationBtnText, { color: isDark ? colors.navyLight : colors.navy }]}>{t('venue.location')}</Text>
+          </TouchableOpacity>
+      </View>
+
     </View>
   );
 }
@@ -135,103 +158,71 @@ export function VenueDetailScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#ECEDF3',
   },
-  backButton: {
+  headerButtons: {
     position: 'absolute',
     left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     zIndex: 10,
   },
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: {
-    padding: spacing.screenPadding,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: 24,
   },
   name: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 16,
-  },
-  meta: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    marginBottom: 10,
   },
   metaText: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
+    fontWeight: '500',
   },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
+  bookBtn: {
+    backgroundColor: colors.navy,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 24,
     marginBottom: 12,
   },
-  branchCard: {
+  bookBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  locationBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
     borderRadius: 12,
-    padding: spacing.lg,
+    borderWidth: 1.5,
+    borderColor: colors.navy,
   },
-  branchInfo: {
-    flex: 1,
-  },
-  branchName: {
-    fontSize: 16,
+  locationBtnText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  branchSport: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  branchAddress: {
-    fontSize: 13,
-    color: colors.textHint,
-  },
-  availabilityRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  dayText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  timeText: {
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
-  stickyBottom: {
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.screenPadding,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    color: colors.navy,
   },
 });

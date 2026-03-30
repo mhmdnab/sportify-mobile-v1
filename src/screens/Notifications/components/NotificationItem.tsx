@@ -28,7 +28,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
       style={[styles.container, !notification.isRead && styles.unread]}
     >
       <View style={[styles.iconCircle, !notification.isRead && styles.unreadIcon]}>
-        <Ionicons name={icon} size={20} color={notification.isRead ? colors.textHint : colors.primary} />
+        <Ionicons name={icon} size={20} color={notification.isRead ? colors.textHint : colors.navy} />
       </View>
       <View style={styles.content}>
         <Text style={[styles.message, !notification.isRead && styles.unreadText]} numberOfLines={2}>
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unreadIcon: {
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${colors.navy}15`,
   },
   content: {
     flex: 1,
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.navy,
     marginLeft: spacing.sm,
   },
 });

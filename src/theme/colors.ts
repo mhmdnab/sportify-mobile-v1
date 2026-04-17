@@ -63,4 +63,4 @@ export const darkColors = {
   stripeBg: (opacity: number) => `rgba(150,170,220,${opacity * 0.5})`,
 } as const;
 
-export type ThemeColors = typeof lightColors;
+export type ThemeColors = typeof lightColors | typeof darkColors;

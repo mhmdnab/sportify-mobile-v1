@@ -19,6 +19,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../stores/auth.store';
 import { isValidEmail, isStrongPassword, isValidName } from '../../utils/validation';
@@ -466,7 +467,7 @@ export function RegisterScreen() {
               <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color={colors.white} />
               </TouchableOpacity>
-              <Ionicons name="fitness" size={36} color={colors.white} />
+              <Image source={require('../../../assets/logo.png')} style={{ width: 80, height: 40 }} contentFit="contain" />
               <View style={{ width: 24 }} />
             </View>
 

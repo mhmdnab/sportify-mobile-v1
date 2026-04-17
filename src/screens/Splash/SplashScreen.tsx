@@ -32,6 +32,10 @@ export function SplashScreen() {
         navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
       } else if (user?.owner) {
         navigation.reset({ index: 0, routes: [{ name: 'OwnerApp' }] });
+      } else if (user?.manager) {
+        navigation.reset({ index: 0, routes: [{ name: 'ManagerApp' }] });
+      } else if (user?.coach) {
+        navigation.reset({ index: 0, routes: [{ name: 'CoachApp' }] });
       } else {
         navigation.reset({ index: 0, routes: [{ name: 'App' }] });
       }

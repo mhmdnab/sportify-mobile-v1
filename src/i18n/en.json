@@ -8,7 +8,9 @@
     "dashboard": "Dashboard",
     "branches": "Branches",
     "venues": "Venues",
-    "bookings": "Bookings"
+    "bookings": "Bookings",
+    "clients": "Clients",
+    "availability": "Availability"
   },
   "auth": {
     "login": "Login",
@@ -118,6 +120,14 @@
     "owner": "Owner",
     "manageDescription": "Manage your courts and bookings",
     "overview": "Overview",
+    "todayOverview": "Today",
+    "confirmedToday": "Confirmed",
+    "revenueToday": "Revenue",
+    "pendingToday": "Pending",
+    "schedule": "Schedule",
+    "appointmentDate": "Appointment date",
+    "confirmedFor": "Confirmed — {{day}} {{date}}",
+    "reservationsFor": "Reservations — {{day}} {{date}}",
     "branches": "Branches",
     "venues": "Venues",
     "bookings": "Bookings",
@@ -162,7 +172,10 @@
     "error": "Error",
     "failedUpdateStatus": "Failed to update status",
     "cancel": "Cancel",
-    "updating": "Updating..."
+    "updating": "Updating...",
+    "openTime": "Open time",
+    "closeTime": "Close time",
+    "saving": "Saving..."
   },
   "days": {
     "mon": "Mon",
@@ -205,6 +218,37 @@
     "bookNow": "Book Now",
     "location": "Location",
     "shareMessage": "Check out {{name}} on Sportify!"
+  },
+  "manager": {
+    "managingBranch": "Managing Branch",
+    "dailyBookings": "Today",
+    "monthlyBookings": "This Month",
+    "yearlyBookings": "This Year",
+    "peakHours": "Peak Hours",
+    "topVenues": "Top Venues",
+    "clients": "Clients",
+    "noClients": "No clients yet",
+    "totalBookings": "Bookings",
+    "revenue": "Revenue",
+    "cancellations": "Cancellations"
+  },
+  "coach": {
+    "role": "Coach",
+    "pendingApprovals": "Pending Approvals",
+    "acceptBooking": "Accept",
+    "rejectBooking": "Decline",
+    "declinedByVenue": "Declined by Venue",
+    "declinedByCoach": "Declined by Coach",
+    "awaitingCoach": "Awaiting Coach",
+    "coachFee": "Coach Fee",
+    "bookWithCoach": "Book with Coach",
+    "selectCoach": "Select a Coach",
+    "myAvailabilities": "My Availabilities",
+    "addAvailability": "Add Availability",
+    "hourlyRate": "Hourly Rate",
+    "bio": "Bio",
+    "noAvailabilities": "No availabilities set yet",
+    "noBookings": "No bookings yet"
   },
   "common": {
     "loading": "Loading...",

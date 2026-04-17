@@ -4,14 +4,18 @@ import { Reservation, PaginatedResponse } from '../types/api';
 
 interface CreateReservationData {
   slotId: number;
+  additionalSlotIds?: number[];
   slotDate: string;
   repeatCount?: number;
   notes?: string;
+  withCoach?: boolean;
+  coachId?: number;
 }
 
 interface ReservationsState {
   reservations: Reservation[];
   currentReservation: Reservation | null;
+  groupReservations: Reservation[];
   isLoading: boolean;
   error: string | null;
   page: number;
@@ -20,6 +24,7 @@ interface ReservationsState {
   fetchOwnReservations: (params?: { page?: number; limit?: number }) => Promise<void>;
   fetchMoreReservations: () => Promise<void>;
   fetchReservationById: (id: number) => Promise<void>;
+  fetchGroupReservations: (groupId: string) => Promise<void>;
   createReservation: (data: CreateReservationData) => Promise<Reservation>;
   cancelReservation: (id: number) => Promise<void>;
   reset: () => void;
@@ -28,6 +33,7 @@ interface ReservationsState {
 export const useReservationsStore = create<ReservationsState>((set, get) => ({
   reservations: [],
   currentReservation: null,
+  groupReservations: [],
   isLoading: false,
   error: null,
   page: 1,
@@ -37,7 +43,7 @@ export const useReservationsStore = create<ReservationsState>((set, get) => ({
     set({ isLoading: true, error: null, page: 1 });
     try {
       const response = await api.get<PaginatedResponse<Reservation>>('/reservations/own', {
-        params: { page: 1, limit: 20, ...params },
+        params: { page: 1, limit: 100, ...params },
       });
       set({
         reservations: response.data.list,
@@ -60,7 +66,7 @@ export const useReservationsStore = create<ReservationsState>((set, get) => ({
     try {
       const nextPage = page + 1;
       const response = await api.get<PaginatedResponse<Reservation>>('/reservations/own', {
-        params: { page: nextPage, limit: 20 },
+        params: { page: nextPage, limit: 100 },
       });
       set((state) => ({
         reservations: [...state.reservations, ...response.data.list],
@@ -82,6 +88,20 @@ export const useReservationsStore = create<ReservationsState>((set, get) => ({
       set({
         isLoading: false,
         error: error?.response?.data?.message || 'Failed to fetch reservation',
+      });
+    }
+  },
+
+  fetchGroupReservations: async (groupId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.get<Reservation[]>(`/reservations/group/${groupId}`);
+      const list = Array.isArray(response.data) ? response.data : (response.data as any)?.data ?? [];
+      set({ groupReservations: list, isLoading: false });
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        error: error?.response?.data?.message || 'Failed to fetch group reservations',
       });
     }
   },
@@ -109,6 +129,9 @@ export const useReservationsStore = create<ReservationsState>((set, get) => ({
         reservations: state.reservations.map((r) =>
           r.id === id ? { ...r, status: 'CANCELLED' as any } : r,
         ),
+        groupReservations: state.groupReservations.map((r) =>
+          r.id === id ? { ...r, status: 'CANCELLED' as any } : r,
+        ),
         currentReservation:
           state.currentReservation?.id === id
             ? { ...state.currentReservation, status: 'CANCELLED' as any }
@@ -124,5 +147,5 @@ export const useReservationsStore = create<ReservationsState>((set, get) => ({
     }
   },
 
-  reset: () => set({ reservations: [], page: 1, hasNext: false }),
+  reset: () => set({ reservations: [], groupReservations: [], page: 1, hasNext: false }),
 }));

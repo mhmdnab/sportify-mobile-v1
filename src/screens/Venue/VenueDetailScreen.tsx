@@ -28,7 +28,7 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'VenueDetail'>;
 
 export function VenueDetailScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
-  const { venueId } = route.params;
+  const { venueId, preselectedCoachId } = route.params;
   const { currentVenue, isLoading, error, fetchVenueById } = useVenuesStore();
   const insets = useSafeAreaInsets();
   const tc = useThemeColors();
@@ -58,7 +58,7 @@ export function VenueDetailScreen({ route, navigation }: Props) {
   };
 
   const handleBookNow = () => {
-    navigation.navigate('Reservation', { venueId });
+    navigation.navigate('Reservation', { venueId, preselectedCoachId });
   };
 
   if (isLoading && !currentVenue) {

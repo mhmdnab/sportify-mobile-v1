@@ -4,9 +4,12 @@ import { Reservation, ReservationStatus, PaginatedResponse } from '../types/api'
 
 interface OwnerReservationsState {
   reservations: Reservation[];
+  allReservations: Reservation[];
   currentReservation: Reservation | null;
+  groupReservations: Reservation[];
   isLoading: boolean;
   isLoadingDetail: boolean;
+  isLoadingSchedule: boolean;
   error: string | null;
   page: number;
   hasNext: boolean;
@@ -14,15 +17,20 @@ interface OwnerReservationsState {
 
   fetchOwnerReservations: (refresh?: boolean) => Promise<void>;
   fetchMore: () => Promise<void>;
+  fetchForSchedule: () => Promise<void>;
   fetchReservationById: (id: number) => Promise<void>;
+  fetchGroupReservations: (groupId: string) => Promise<void>;
   updateReservationStatus: (id: number, status: ReservationStatus) => Promise<void>;
 }
 
 export const useOwnerReservationsStore = create<OwnerReservationsState>((set, get) => ({
   reservations: [],
+  allReservations: [],
   currentReservation: null,
+  groupReservations: [],
   isLoading: false,
   isLoadingDetail: false,
+  isLoadingSchedule: false,
   error: null,
   page: 1,
   hasNext: false,
@@ -64,6 +72,18 @@ export const useOwnerReservationsStore = create<OwnerReservationsState>((set, ge
     }
   },
 
+  fetchForSchedule: async () => {
+    set({ isLoadingSchedule: true });
+    try {
+      const res = await api.get<PaginatedResponse<Reservation>>('/reservations/owner/all', {
+        params: { page: 1, limit: 100 },
+      });
+      set({ allReservations: res.data.list, isLoadingSchedule: false });
+    } catch (error: any) {
+      set({ isLoadingSchedule: false });
+    }
+  },
+
   fetchReservationById: async (id: number) => {
     set({ isLoadingDetail: true });
     try {
@@ -74,11 +94,25 @@ export const useOwnerReservationsStore = create<OwnerReservationsState>((set, ge
     }
   },
 
+  fetchGroupReservations: async (groupId: string) => {
+    set({ isLoadingDetail: true });
+    try {
+      const res = await api.get<Reservation[]>(`/reservations/group/${groupId}`);
+      const list = Array.isArray(res.data) ? res.data : (res.data as any)?.data ?? [];
+      set({ groupReservations: list, isLoadingDetail: false });
+    } catch (error: any) {
+      set({ isLoadingDetail: false, error: error?.message });
+    }
+  },
+
   updateReservationStatus: async (id: number, status: ReservationStatus) => {
     try {
       await api.put(`/reservations/${id}`, { status });
       set((s) => ({
         reservations: s.reservations.map((r) =>
+          r.id === id ? { ...r, status } : r
+        ),
+        allReservations: s.allReservations.map((r) =>
           r.id === id ? { ...r, status } : r
         ),
         currentReservation:

@@ -27,7 +27,7 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
     set({ isLoading: true, error: null, page: 1 });
     try {
       const response = await api.get<PaginatedResponse<Notification>>('/notifications/own', {
-        params: { page: 1, limit: 20, ...params },
+        params: { page: 1, limit: 20, column: 'createdAt', order: 'desc', ...params },
       });
       const notifications = response.data.list;
       const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -53,7 +53,7 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
     try {
       const nextPage = page + 1;
       const response = await api.get<PaginatedResponse<Notification>>('/notifications/own', {
-        params: { page: nextPage, limit: 20 },
+        params: { page: nextPage, limit: 20, column: 'createdAt', order: 'desc' },
       });
       set((state) => ({
         notifications: [...state.notifications, ...response.data.list],

@@ -20,6 +20,8 @@ const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.REJECTED]: '#FF3B30',
   [ReservationStatus.PLAYED]: '#007AFF',
   [ReservationStatus.PAID]: colors.textSecondary,
+  [ReservationStatus.COACH_PENDING]: '#F97316',
+  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
 };
 
 export function ReservationCard({ reservation, onPress }: ReservationCardProps) {
@@ -29,6 +31,18 @@ export function ReservationCard({ reservation, onPress }: ReservationCardProps) 
   const slotTime = reservation.slot
     ? `${formatTime(reservation.slot.startTime)} - ${formatTime(reservation.slot.endTime)}`
     : '';
+
+  const venuePrice = reservation.slot?.price ?? 0;
+  const slotDurationHours = (() => {
+    if (!reservation.slot?.startTime || !reservation.slot?.endTime) return 1;
+    const [sh, sm] = (reservation.slot.startTime as string).split(':').map(Number);
+    const [eh, em] = (reservation.slot.endTime as string).split(':').map(Number);
+    return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+  })();
+  const coachFee = reservation.withCoach && reservation.coachRate
+    ? reservation.coachRate * slotDurationHours
+    : 0;
+  const total = venuePrice + coachFee;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[styles.container, { backgroundColor: tc.cardBg }]}>
@@ -54,10 +68,13 @@ export function ReservationCard({ reservation, onPress }: ReservationCardProps) 
               <Text style={[styles.detailText, { color: tc.textSecondary }]}>{slotTime}</Text>
             </View>
           )}
-          {reservation.slot?.price && (
+          {total > 0 && (
             <View style={styles.detailRow}>
               <Ionicons name="cash-outline" size={14} color={tc.textHint} />
-              <Text style={styles.priceText}>{formatPrice(reservation.slot.price)}</Text>
+              <Text style={styles.priceText}>
+                {formatPrice(total)}
+                {reservation.withCoach ? ' (with coach)' : ''}
+              </Text>
             </View>
           )}
         </View>

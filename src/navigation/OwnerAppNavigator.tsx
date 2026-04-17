@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CustomTabBar } from './CustomTabBar';
 import { OwnerDashboardStack } from './OwnerDashboardStack';
-import { OwnerBranchesStack } from './OwnerBranchesStack';
+import { OwnerScheduleStack } from './OwnerScheduleStack';
 import { OwnerVenuesStack } from './OwnerVenuesStack';
 import { OwnerReservationsStack } from './OwnerReservationsStack';
 import { ProfileStack } from './ProfileStack';
@@ -22,7 +22,7 @@ export function OwnerAppNavigator() {
         }}
       >
         <Tab.Screen name="DashboardTab" component={OwnerDashboardStack} />
-        <Tab.Screen name="BranchesTab" component={OwnerBranchesStack} />
+        <Tab.Screen name="ScheduleTab" component={OwnerScheduleStack} />
         <Tab.Screen name="VenuesTab" component={OwnerVenuesStack} />
         <Tab.Screen name="ReservationsTab" component={OwnerReservationsStack} />
         <Tab.Screen name="ProfileTab" component={ProfileStack} />

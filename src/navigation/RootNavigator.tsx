@@ -6,6 +6,8 @@ import { OnboardingScreen } from '../screens/Onboarding/OnboardingScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { AppNavigator } from './AppNavigator';
 import { OwnerAppNavigator } from './OwnerAppNavigator';
+import { ManagerAppNavigator } from './ManagerAppNavigator';
+import { CoachAppNavigator } from './CoachAppNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -17,6 +19,8 @@ export function RootNavigator() {
       <Stack.Screen name="Auth" component={AuthNavigator} />
       <Stack.Screen name="App" component={AppNavigator} />
       <Stack.Screen name="OwnerApp" component={OwnerAppNavigator} />
+      <Stack.Screen name="ManagerApp" component={ManagerAppNavigator} />
+      <Stack.Screen name="CoachApp" component={CoachAppNavigator} />
     </Stack.Navigator>
   );
 }

@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../stores/auth.store';
@@ -51,7 +52,7 @@ export function LoginScreen() {
     try {
       await login({ email, password });
       const currentUser = useAuthStore.getState().user;
-      const target = currentUser?.owner ? 'OwnerApp' : 'App';
+      const target = currentUser?.owner ? 'OwnerApp' : currentUser?.manager ? 'ManagerApp' : currentUser?.coach ? 'CoachApp' : 'App';
       (navigation as any).reset({ index: 0, routes: [{ name: target }] });
     } catch (error: any) {
       Alert.alert(
@@ -73,8 +74,11 @@ export function LoginScreen() {
         end={{ x: 0.5, y: 1 }}
       >
         <View style={styles.logoContainer}>
-          <Ionicons name="fitness" size={48} color={colors.white} />
-          <Text style={styles.logoText}>SPORTIFY</Text>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logoImage}
+            contentFit="contain"
+          />
         </View>
       </LinearGradient>
 
@@ -184,6 +188,10 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
+  },
+  logoImage: {
+    width: 160,
+    height: 80,
   },
   logoText: {
     fontSize: 22,

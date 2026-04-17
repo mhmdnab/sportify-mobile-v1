@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../stores/auth.store';
 import { RootStackParamList } from '../../types/navigation';
@@ -41,9 +42,11 @@ export function OnboardingScreen() {
       >
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoIcon}>
-            <Ionicons name="fitness" size={56} color={colors.white} />
-          </View>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logoImage}
+            contentFit="contain"
+          />
         </View>
 
         {/* Welcome Text */}
@@ -86,6 +89,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginTop: 20,
+  },
+  logoImage: {
+    width: 200,
+    height: 100,
   },
   logoIcon: {
     width: 100,

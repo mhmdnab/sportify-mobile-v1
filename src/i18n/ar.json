@@ -8,7 +8,9 @@
     "dashboard": "لوحة التحكم",
     "branches": "الفروع",
     "venues": "الملاعب",
-    "bookings": "الحجوزات"
+    "bookings": "الحجوزات",
+    "clients": "العملاء",
+    "availability": "الجدول الزمني"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -118,6 +120,14 @@
     "owner": "مالك",
     "manageDescription": "إدارة ملاعبك وحجوزاتك",
     "overview": "نظرة عامة",
+    "todayOverview": "اليوم",
+    "confirmedToday": "مؤكدة",
+    "revenueToday": "الإيرادات",
+    "pendingToday": "قيد الانتظار",
+    "schedule": "الجدول",
+    "appointmentDate": "تاريخ الموعد",
+    "confirmedFor": "مؤكدة — {{day}} {{date}}",
+    "reservationsFor": "حجوزات — {{day}} {{date}}",
     "branches": "الفروع",
     "venues": "الملاعب",
     "bookings": "الحجوزات",
@@ -162,7 +172,10 @@
     "error": "خطأ",
     "failedUpdateStatus": "فشل تحديث الحالة",
     "cancel": "إلغاء",
-    "updating": "جاري التحديث..."
+    "updating": "جاري التحديث...",
+    "openTime": "وقت الفتح",
+    "closeTime": "وقت الإغلاق",
+    "saving": "جاري الحفظ..."
   },
   "days": {
     "mon": "إثنين",
@@ -205,6 +218,37 @@
     "bookNow": "احجز الآن",
     "location": "الموقع",
     "shareMessage": "تحقق من {{name}} على سبورتيفاي!"
+  },
+  "manager": {
+    "managingBranch": "إدارة الفرع",
+    "dailyBookings": "اليوم",
+    "monthlyBookings": "هذا الشهر",
+    "yearlyBookings": "هذا العام",
+    "peakHours": "أوقات الذروة",
+    "topVenues": "أفضل الملاعب",
+    "clients": "العملاء",
+    "noClients": "لا يوجد عملاء بعد",
+    "totalBookings": "الحجوزات",
+    "revenue": "الإيرادات",
+    "cancellations": "الإلغاءات"
+  },
+  "coach": {
+    "role": "مدرب",
+    "pendingApprovals": "بانتظار الموافقة",
+    "acceptBooking": "قبول",
+    "rejectBooking": "رفض",
+    "declinedByVenue": "مرفوض من الملعب",
+    "declinedByCoach": "مرفوض من المدرب",
+    "awaitingCoach": "بانتظار المدرب",
+    "coachFee": "رسوم المدرب",
+    "bookWithCoach": "احجز مع مدرب",
+    "selectCoach": "اختر مدرباً",
+    "myAvailabilities": "أوقاتي المتاحة",
+    "addAvailability": "إضافة وقت متاح",
+    "hourlyRate": "السعر بالساعة",
+    "bio": "نبذة",
+    "noAvailabilities": "لا توجد أوقات متاحة",
+    "noBookings": "لا توجد حجوزات"
   },
   "common": {
     "loading": "جاري التحميل...",

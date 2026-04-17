@@ -1,12 +1,20 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
-import { Venue, PaginatedResponse } from '../types/api';
+import { Venue, Day, PaginatedResponse } from '../types/api';
+
+interface AvailabilityUpdate {
+  day: Day;
+  startTime: string;
+  endTime: string;
+  isOpen: boolean;
+}
 
 interface OwnerVenuesState {
   venues: Venue[];
   currentVenue: Venue | null;
   isLoading: boolean;
   isLoadingDetail: boolean;
+  isSavingAvailability: boolean;
   error: string | null;
   page: number;
   hasNext: boolean;
@@ -16,6 +24,7 @@ interface OwnerVenuesState {
   fetchMore: () => Promise<void>;
   fetchVenueById: (id: number) => Promise<void>;
   deleteVenue: (id: number) => Promise<void>;
+  updateAvailability: (venueId: number, availability: AvailabilityUpdate[]) => Promise<void>;
 }
 
 export const useOwnerVenuesStore = create<OwnerVenuesState>((set, get) => ({
@@ -23,6 +32,7 @@ export const useOwnerVenuesStore = create<OwnerVenuesState>((set, get) => ({
   currentVenue: null,
   isLoading: false,
   isLoadingDetail: false,
+  isSavingAvailability: false,
   error: null,
   page: 1,
   hasNext: false,
@@ -79,6 +89,19 @@ export const useOwnerVenuesStore = create<OwnerVenuesState>((set, get) => ({
       await api.put(`/venues/${id}/delete`);
       set((s) => ({ venues: s.venues.filter((v) => v.id !== id) }));
     } catch (error: any) {
+      throw error;
+    }
+  },
+
+  updateAvailability: async (venueId: number, availability: AvailabilityUpdate[]) => {
+    set({ isSavingAvailability: true });
+    try {
+      await api.put(`/venues/${venueId}`, { availability });
+      // Refresh the current venue to get updated data
+      const res = await api.get<Venue>(`/venues/${venueId}`);
+      set({ currentVenue: res.data, isSavingAvailability: false });
+    } catch (error: any) {
+      set({ isSavingAvailability: false });
       throw error;
     }
   },

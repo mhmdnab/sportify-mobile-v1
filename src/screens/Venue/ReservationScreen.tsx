@@ -10,6 +10,7 @@ import {
   TextInput,
   Modal,
   KeyboardAvoidingView,
+  Switch,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +22,8 @@ import { spacing } from '../../theme/spacing';
 import { useVenuesStore } from '../../stores/venues.store';
 import { useAuthStore } from '../../stores/auth.store';
 import { useReservationsStore } from '../../stores/reservations.store';
-import { Slot } from '../../types/api';
+import { Coach, Slot } from '../../types/api';
+import { api } from '../../lib/api';
 import { getDayOfWeek, getNext14Days, formatTime, formatSlotDate } from '../../utils/date';
 import { formatPrice } from '../../utils/currency';
 import { HomeStackParamList } from '../../types/navigation';
@@ -32,8 +34,15 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'Reservation'>;
 
 const days = getNext14Days();
 
+function slotDuration(slot: Slot): number {
+  if (!slot.startTime || !slot.endTime) return 1;
+  const [sh, sm] = (slot.startTime as string).split(':').map(Number);
+  const [eh, em] = (slot.endTime as string).split(':').map(Number);
+  return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+}
+
 export function ReservationScreen({ route, navigation }: Props) {
-  const { venueId } = route.params;
+  const { venueId, preselectedCoachId } = route.params;
   const insets = useSafeAreaInsets();
   const { currentVenue, fetchVenueById } = useVenuesStore();
   const user = useAuthStore((s) => s.user);
@@ -42,15 +51,40 @@ export function ReservationScreen({ route, navigation }: Props) {
   const { createReservation, isLoading: bookingLoading } = useReservationsStore();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<Slot[]>([]);
   const [notes, setNotes] = useState('');
   const [confirmVisible, setConfirmVisible] = useState(false);
+
+  // Coach booking
+  const [availableCoaches, setAvailableCoaches] = useState<Coach[]>([]);
+  const [withCoach, setWithCoach] = useState(false);
+  const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!currentVenue || currentVenue.id !== venueId) {
       fetchVenueById(venueId);
     }
   }, [venueId]);
+
+  useEffect(() => {
+    const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayName = dayNames[selectedDate.getDay()];
+    api.get<any>('/coaches', { params: { venueId, day: dayName, page: 1, limit: 50 } }).then((res) => {
+      const list = res.data?.list ?? res.data?.data?.list ?? [];
+      setAvailableCoaches(list);
+      if (preselectedCoachId) {
+        const match = list.find((c: any) => c.id === preselectedCoachId);
+        if (match) {
+          setSelectedCoachId(preselectedCoachId);
+          setWithCoach(true);
+          return;
+        }
+      }
+      if (list.length > 0 && !list.find((c: any) => c.id === selectedCoachId)) {
+        setSelectedCoachId(list[0].id);
+      }
+    }).catch(() => {});
+  }, [venueId, selectedDate]);
 
   const dayOfWeek = getDayOfWeek(selectedDate);
 
@@ -70,43 +104,62 @@ export function ReservationScreen({ route, navigation }: Props) {
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
-    setSelectedSlot(null);
+    setSelectedSlots([]);
   };
 
   const handleSlotSelect = (slot: Slot) => {
-    setSelectedSlot(slot);
+    setSelectedSlots((prev) => {
+      const exists = prev.some((s) => s.id === slot.id);
+      if (exists) return prev.filter((s) => s.id !== slot.id);
+      return [...prev, slot];
+    });
   };
 
+  // Derived totals
+  const selectedCoach = availableCoaches.find((c) => c.id === selectedCoachId);
+  const totalVenuePrice = selectedSlots.reduce((acc, s) => acc + (s.price ?? 0), 0);
+  const totalDurationHours = selectedSlots.reduce((acc, s) => acc + slotDuration(s), 0);
+  const coachFee = withCoach && selectedCoach ? (selectedCoach.hourlyRate ?? 0) * totalDurationHours : 0;
+  const grandTotal = totalVenuePrice + coachFee;
+
   const handleBookNow = () => {
-    if (!selectedSlot) {
-      Alert.alert('Select a Time', 'Please select a time slot to continue.');
+    if (selectedSlots.length === 0) {
+      Alert.alert('Select a Time', 'Please select at least one time slot to continue.');
       return;
     }
     setConfirmVisible(true);
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedSlot) return;
+    if (selectedSlots.length === 0) return;
+    const [primarySlot, ...extraSlots] = selectedSlots;
     try {
       const reservation = await createReservation({
-        slotId: selectedSlot.id,
+        slotId: primarySlot.id,
+        ...(extraSlots.length > 0 && { additionalSlotIds: extraSlots.map((s) => s.id) }),
         slotDate: formatSlotDate(selectedDate),
         notes: notes || undefined,
+        ...(withCoach && selectedCoachId && { withCoach: true, coachId: selectedCoachId }),
       });
       setConfirmVisible(false);
-      setSelectedSlot(null);
+      setSelectedSlots([]);
       await fetchVenueById(venueId);
-      Alert.alert('Booking Confirmed!', 'Your reservation has been created.', [
-        {
+      Alert.alert(
+        selectedSlots.length > 1 ? 'Bookings Confirmed!' : 'Booking Confirmed!',
+        selectedSlots.length > 1
+          ? `${selectedSlots.length} slots booked successfully.`
+          : 'Your reservation has been created.',
+        [{
           text: 'OK',
           onPress: () => {
+            navigation.goBack();
             (navigation as any).navigate('BookingsTab', {
               screen: 'ReservationDetail',
               params: { reservationId: reservation.id },
             });
           },
-        },
-      ]);
+        }],
+      );
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.message || 'Something went wrong. Please try again.';
       Alert.alert('Booking Failed', Array.isArray(msg) ? msg.join('\n') : msg);
@@ -129,17 +182,10 @@ export function ReservationScreen({ route, navigation }: Props) {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Date Picker */}
         <Text style={[styles.sectionLabel, { color: tc.textPrimary }]}>Select Date</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateRow}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
           {days.map((day) => {
             const isSelected = day.date.toDateString() === selectedDateKey;
             const available = hasSlots(day.date);
@@ -157,9 +203,7 @@ export function ReservationScreen({ route, navigation }: Props) {
                   {day.dayNum}
                 </Text>
                 <View style={styles.dotRow}>
-                  {available && (
-                    <View style={[styles.availDot, isSelected && styles.availDotSelected]} />
-                  )}
+                  {available && <View style={[styles.availDot, isSelected && styles.availDotSelected]} />}
                 </View>
               </TouchableOpacity>
             );
@@ -176,7 +220,12 @@ export function ReservationScreen({ route, navigation }: Props) {
         </View>
 
         {/* Time Slots */}
-        <Text style={[styles.sectionLabel, { color: tc.textPrimary }]}>Available Time Slots</Text>
+        <Text style={[styles.sectionLabel, { color: tc.textPrimary }]}>
+          Available Time Slots
+          {selectedSlots.length > 0 && (
+            <Text style={{ color: colors.navy, fontSize: 13 }}> · {selectedSlots.length} selected</Text>
+          )}
+        </Text>
         {availableSlots.length === 0 ? (
           <View style={styles.noSlotsContainer}>
             <Ionicons name="time-outline" size={40} color={tc.textHint} />
@@ -186,7 +235,7 @@ export function ReservationScreen({ route, navigation }: Props) {
         ) : (
           <View style={styles.slotsContainer}>
             {availableSlots.map((slot) => {
-              const isSelected = selectedSlot?.id === slot.id;
+              const isSelected = selectedSlots.some((s) => s.id === slot.id);
               const isUnavailable = slot.isAvailable === false;
               return (
                 <TouchableOpacity
@@ -203,7 +252,7 @@ export function ReservationScreen({ route, navigation }: Props) {
                 >
                   <View style={styles.slotTimeRow}>
                     <Ionicons
-                      name="time-outline"
+                      name={isSelected ? 'checkmark-circle' : 'time-outline'}
                       size={18}
                       color={isUnavailable ? tc.textHint : isSelected ? colors.white : tc.textPrimary}
                     />
@@ -215,13 +264,54 @@ export function ReservationScreen({ route, navigation }: Props) {
                     <Text style={[styles.slotPrice, isSelected && styles.slotTextSelected, isUnavailable && styles.slotTextUnavailable]}>
                       {formatPrice(slot.price)}
                     </Text>
-                    {isUnavailable && (
-                      <Text style={styles.slotUnavailableLabel}>Booked</Text>
-                    )}
+                    {isUnavailable && <Text style={styles.slotUnavailableLabel}>Booked</Text>}
                   </View>
                 </TouchableOpacity>
               );
             })}
+          </View>
+        )}
+
+        {/* Coach booking toggle */}
+        {availableCoaches.length > 0 && selectedSlots.length > 0 && (
+          <View style={[styles.coachSection, { backgroundColor: tc.cardBg }]}>
+            <View style={styles.coachToggleRow}>
+              <View style={styles.coachToggleLeft}>
+                <Ionicons name="fitness-outline" size={18} color="#0B1A3E" />
+                <Text style={[styles.coachToggleLabel, { color: tc.textPrimary }]}>Book with Coach</Text>
+              </View>
+              <Switch
+                value={withCoach}
+                onValueChange={setWithCoach}
+                trackColor={{ true: '#0B1A3E', false: '#888' }}
+                thumbColor="#fff"
+              />
+            </View>
+            {withCoach && (
+              <View style={styles.coachList}>
+                {availableCoaches.map((coach) => {
+                  const isCoachSelected = selectedCoachId === coach.id;
+                  return (
+                    <TouchableOpacity
+                      key={coach.id}
+                      onPress={() => setSelectedCoachId(coach.id)}
+                      style={[styles.coachItem, isCoachSelected && styles.coachItemSelected]}
+                    >
+                      <View style={styles.coachItemLeft}>
+                        <View style={[styles.coachAvatar, { backgroundColor: isCoachSelected ? '#0B1A3E' : 'rgba(11,26,62,0.1)' }]}>
+                          <Ionicons name="person" size={16} color={isCoachSelected ? '#fff' : '#0B1A3E'} />
+                        </View>
+                        <View>
+                          <Text style={[styles.coachName, { color: tc.textPrimary }]}>{coach.user?.name ?? `Coach #${coach.id}`}</Text>
+                          {coach.sport ? <Text style={[styles.coachSport, { color: tc.textSecondary }]}>{coach.sport}</Text> : null}
+                        </View>
+                      </View>
+                      <Text style={[styles.coachRate, { color: '#0B1A3E' }]}>${coach.hourlyRate}/hr</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
           </View>
         )}
 
@@ -230,64 +320,79 @@ export function ReservationScreen({ route, navigation }: Props) {
 
       {/* Bottom Cost + Book Now */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12, backgroundColor: tc.cardBg }]}>
-        {selectedSlot && (
+        {selectedSlots.length > 0 && (
           <View style={styles.costRow}>
-            <Text style={[styles.costLabel, { color: tc.textSecondary }]}>Cost</Text>
-            <Text style={styles.costValue}>{formatPrice(selectedSlot.price)}</Text>
+            <Text style={[styles.costLabel, { color: tc.textSecondary }]}>
+              {withCoach && selectedCoachId ? 'Total (with coach)' : 'Total'}
+              {selectedSlots.length > 1 ? ` · ${selectedSlots.length} slots` : ''}
+            </Text>
+            <Text style={styles.costValue}>{formatPrice(grandTotal)}</Text>
           </View>
         )}
         <TouchableOpacity
-          style={[styles.bookNowBtn, !selectedSlot && styles.bookNowBtnDisabled]}
+          style={[styles.bookNowBtn, selectedSlots.length === 0 && styles.bookNowBtnDisabled]}
           onPress={handleBookNow}
           activeOpacity={0.8}
-          disabled={!selectedSlot}
+          disabled={selectedSlots.length === 0}
         >
-          <Text style={styles.bookNowText}>Book Now</Text>
+          <Text style={styles.bookNowText}>
+            {selectedSlots.length > 1 ? `Book ${selectedSlots.length} Slots` : 'Book Now'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Confirmation Modal */}
-      <Modal
-        visible={confirmVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setConfirmVisible(false)}
-      >
+      <Modal visible={confirmVisible} animationType="slide" transparent onRequestClose={() => setConfirmVisible(false)}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setConfirmVisible(false)}
-          />
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setConfirmVisible(false)} />
           <View style={[styles.modalSheet, { backgroundColor: tc.cardBg }]}>
             <View style={[styles.modalHandle, { backgroundColor: tc.border }]} />
-
             <Text style={[styles.sheetTitle, { color: tc.textPrimary }]}>Confirm Booking</Text>
 
             <View style={styles.summarySection}>
               <SummaryRow label="Venue" value={venueName} tc={tc} />
               <SummaryRow
                 label="Date"
-                value={selectedDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                value={selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 tc={tc}
               />
-              {selectedSlot && (
+              {/* One row per selected slot */}
+              {selectedSlots.map((slot, i) => (
+                <SummaryRow
+                  key={slot.id}
+                  label={selectedSlots.length > 1 ? `Slot ${i + 1}` : 'Time'}
+                  value={`${formatTime(slot.startTime)} – ${formatTime(slot.endTime)}  ${formatPrice(slot.price)}`}
+                  tc={tc}
+                />
+              ))}
+
+              {/* Coach rows */}
+              {withCoach && selectedCoach && (
                 <>
                   <SummaryRow
-                    label="Time"
-                    value={`${formatTime(selectedSlot.startTime)} - ${formatTime(selectedSlot.endTime)}`}
+                    label="Coach"
+                    value={`${selectedCoach.user?.name ?? `Coach #${selectedCoach.id}`} · $${selectedCoach.hourlyRate}/hr`}
                     tc={tc}
                   />
-                  <SummaryRow label="Price" value={formatPrice(selectedSlot.price)} highlight tc={tc} />
+                  <SummaryRow
+                    label={`Coach fee (${totalDurationHours}h × $${selectedCoach.hourlyRate})`}
+                    value={formatPrice(coachFee)}
+                    tc={tc}
+                    highlight
+                  />
                 </>
               )}
+
+              {/* Total */}
+              <SummaryRow
+                label={selectedSlots.length > 1 ? `Venue subtotal (${selectedSlots.length} slots)` : 'Venue fee'}
+                value={formatPrice(totalVenuePrice)}
+                tc={tc}
+              />
+              <SummaryRow label="Total" value={formatPrice(grandTotal)} tc={tc} highlight />
             </View>
 
             <TextInput
@@ -324,30 +429,14 @@ function SummaryRow({ label, value, highlight, tc }: { label: string; value: str
 }
 
 const summaryStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  label: {
-    fontSize: 14,
-  },
-  value: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  highlight: {
-    color: colors.navy,
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1 },
+  label: { fontSize: 14, flex: 1, paddingRight: 8 },
+  value: { fontSize: 14, fontWeight: '600', textAlign: 'right' },
+  highlight: { color: colors.navy, fontSize: 16, fontWeight: '700' },
 });
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     backgroundColor: colors.navy,
     flexDirection: 'row',
@@ -365,257 +454,98 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.white,
-    textAlign: 'center',
-    marginHorizontal: 12,
-  },
-  scrollContent: {
-    paddingTop: 20,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-    paddingHorizontal: spacing.screenPadding,
-  },
-  dateRow: {
-    paddingHorizontal: spacing.screenPadding,
-    paddingBottom: 20,
-    gap: 10,
-  },
+  headerTitle: { flex: 1, fontSize: 20, fontWeight: '700', color: colors.white, textAlign: 'center', marginHorizontal: 12 },
+  scrollContent: { paddingTop: 20 },
+  sectionLabel: { fontSize: 16, fontWeight: '700', marginBottom: 12, paddingHorizontal: spacing.screenPadding },
+  dateRow: { paddingHorizontal: spacing.screenPadding, paddingBottom: 20, gap: 10 },
   dateChip: {
-    width: 68,
-    height: 84,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 68, height: 84, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
       android: { elevation: 2 },
     }),
   },
-  dateChipSelected: {
-    backgroundColor: colors.navy,
-  },
-  dateLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  dateLabelSelected: {
-    color: colors.white,
-  },
-  dateNum: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  dateNumSelected: {
-    color: colors.white,
-  },
-  dotRow: {
-    height: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  availDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#22c55e',
-  },
-  availDotSelected: {
-    backgroundColor: colors.white,
-  },
-  reservationNameSection: {
-    marginBottom: 20,
-  },
+  dateChipSelected: { backgroundColor: colors.navy },
+  dateLabel: { fontSize: 12, fontWeight: '500', marginBottom: 4 },
+  dateLabelSelected: { color: colors.white },
+  dateNum: { fontSize: 20, fontWeight: '700' },
+  dateNumSelected: { color: colors.white },
+  dotRow: { height: 6, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  availDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#22c55e' },
+  availDotSelected: { backgroundColor: colors.white },
+  reservationNameSection: { marginBottom: 20 },
   reservationNameCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: spacing.screenPadding,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: spacing.screenPadding,
+    borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
       android: { elevation: 2 },
     }),
   },
-  reservationNameText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  slotsContainer: {
-    paddingHorizontal: spacing.screenPadding,
-    gap: 10,
-  },
+  reservationNameText: { fontSize: 15, fontWeight: '600' },
+  slotsContainer: { paddingHorizontal: spacing.screenPadding, gap: 10 },
   slotCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 14, paddingVertical: 16, paddingHorizontal: 16,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
       android: { elevation: 2 },
     }),
   },
-  slotCardSelected: {
-    backgroundColor: colors.navy,
-    borderWidth: 1.5,
-    borderColor: colors.navy,
-  },
-  slotCardUnavailable: {
-    opacity: 0.45,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-  },
-  slotRightCol: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  slotUnavailableLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.error,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  slotTextUnavailable: {
-    color: colors.textHint,
-  },
-  slotTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  slotTime: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  slotPrice: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.navy,
-  },
-  slotTextSelected: {
-    color: colors.white,
-  },
-  noSlotsContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 12,
-  },
-  noSlotsText: {
-    fontSize: 15,
-  },
-  noSlotsHint: {
-    fontSize: 12,
-    marginTop: 4,
-  },
+  slotCardSelected: { backgroundColor: colors.navy, borderWidth: 1.5, borderColor: colors.navy },
+  slotCardUnavailable: { opacity: 0.45, borderWidth: 1.5, borderStyle: 'dashed' },
+  slotRightCol: { alignItems: 'flex-end', gap: 2 },
+  slotUnavailableLabel: { fontSize: 10, fontWeight: '600', color: colors.error, textTransform: 'uppercase', letterSpacing: 0.5 },
+  slotTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  slotTime: { fontSize: 15, fontWeight: '600' },
+  slotPrice: { fontSize: 15, fontWeight: '700', color: colors.navy },
+  slotTextSelected: { color: colors.white },
+  slotTextUnavailable: { color: colors.textHint },
+  noSlotsContainer: { alignItems: 'center', paddingVertical: 40, gap: 12 },
+  noSlotsText: { fontSize: 15 },
+  noSlotsHint: { fontSize: 12, marginTop: 4 },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 16,
-    paddingHorizontal: spacing.screenPadding,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingTop: 16, paddingHorizontal: spacing.screenPadding,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12 },
       android: { elevation: 8 },
     }),
   },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  costLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  costValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.navy,
-  },
-  bookNowBtn: {
-    backgroundColor: colors.navy,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  bookNowBtnDisabled: {
-    backgroundColor: colors.textHint,
-  },
-  bookNowText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: spacing.screenPadding,
-    paddingBottom: 36,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
-  },
-  sheetTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: spacing.lg,
-  },
-  summarySection: {
-    marginBottom: spacing.lg,
-  },
+  costRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  costLabel: { fontSize: 16, fontWeight: '600' },
+  costValue: { fontSize: 22, fontWeight: '700', color: colors.navy },
+  bookNowBtn: { backgroundColor: colors.navy, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  bookNowBtnDisabled: { backgroundColor: colors.textHint },
+  bookNowText: { fontSize: 17, fontWeight: '700', color: colors.white },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.screenPadding, paddingBottom: 36 },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: spacing.lg },
+  sheetTitle: { fontSize: 20, fontWeight: '700', marginBottom: spacing.lg },
+  summarySection: { marginBottom: spacing.lg },
   notesInput: {
-    borderRadius: 12,
-    padding: spacing.md,
-    fontSize: 15,
-    minHeight: 60,
-    marginBottom: spacing.lg,
-    textAlignVertical: 'top',
+    borderRadius: 12, padding: spacing.md, fontSize: 15,
+    minHeight: 60, marginBottom: spacing.lg, textAlignVertical: 'top',
   },
+  coachSection: {
+    borderRadius: 16, padding: spacing.md,
+    marginTop: spacing.lg, marginBottom: spacing.sm,
+    marginHorizontal: spacing.screenPadding,
+  },
+  coachToggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  coachToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  coachToggleLabel: { fontSize: 15, fontWeight: '600' },
+  coachList: { marginTop: spacing.md, gap: 8 },
+  coachItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: spacing.md, borderRadius: 12, borderWidth: 1,
+    borderColor: 'rgba(11,26,62,0.15)', backgroundColor: 'rgba(11,26,62,0.04)',
+  },
+  coachItemSelected: { borderColor: '#0B1A3E', backgroundColor: 'rgba(11,26,62,0.1)' },
+  coachItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  coachAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  coachName: { fontSize: 14, fontWeight: '600' },
+  coachSport: { fontSize: 12, marginTop: 1 },
+  coachRate: { fontSize: 13, fontWeight: '700' },
 });

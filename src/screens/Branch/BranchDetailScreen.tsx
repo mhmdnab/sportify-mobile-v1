@@ -35,7 +35,7 @@ const IMAGE_HEIGHT = 300;
 
 export function BranchDetailScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
-  const { branchId } = route.params;
+  const { branchId, preselectedCoachId } = route.params;
   const { currentBranch, isLoading, error, fetchBranchById } =
     useBranchesStore();
   const insets = useSafeAreaInsets();
@@ -220,7 +220,7 @@ export function BranchDetailScreen({ route, navigation }: Props) {
                     key={venue.id}
                     venue={venue}
                     onPress={() =>
-                      navigation.navigate("VenueDetail", { venueId: venue.id })
+                      navigation.navigate("VenueDetail", { venueId: venue.id, preselectedCoachId })
                     }
                   />
                 ))

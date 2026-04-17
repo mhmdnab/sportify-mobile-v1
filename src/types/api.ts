@@ -15,6 +15,8 @@ export enum ReservationStatus {
   REJECTED = 'REJECTED',
   PLAYED = 'PLAYED',
   PAID = 'PAID',
+  COACH_PENDING = 'COACH_PENDING',
+  COACH_REJECTED = 'COACH_REJECTED',
 }
 
 export enum EntityType {
@@ -54,6 +56,7 @@ export interface User {
   admin?: Admin;
   owner?: Owner;
   coach?: Coach;
+  manager?: Manager;
 }
 
 export interface Admin {
@@ -66,8 +69,44 @@ export interface Owner {
   package?: Package;
 }
 
+export interface Review {
+  id: number;
+  userId: number;
+  rating: number;
+  comment?: string;
+  coachId?: number;
+  venueId?: number;
+  createdAt: string;
+  user?: Pick<User, 'id' | 'name' | 'image'>;
+}
+
 export interface Coach {
   id: number;
+  bio?: string;
+  hourlyRate?: number;
+  sport?: string;
+  avgRating?: number;
+  reviewCount?: number;
+  user?: Pick<User, 'id' | 'name' | 'email' | 'phone' | 'image'>;
+  availabilities?: CoachAvailability[];
+  reviews?: Review[];
+  _count?: { reviews: number };
+}
+
+export interface CoachAvailability {
+  id: number;
+  coachId: number;
+  venueId?: number | null;
+  day: Day;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+  venue?: Venue;
+}
+
+export interface Manager {
+  id: number;
+  branchId: number;
 }
 
 export interface Package {
@@ -150,6 +189,12 @@ export interface Slot {
   isAvailable?: boolean;
 }
 
+export interface ReservationSlotEntry {
+  id: number;
+  slotId: number;
+  slot: Slot & { availability?: Availability & { venue?: Venue } };
+}
+
 export interface Reservation {
   id: number;
   slotId: number;
@@ -159,10 +204,15 @@ export interface Reservation {
   status: ReservationStatus;
   slotDate: string;
   isDeleted: boolean;
+  withCoach: boolean;
+  coachId?: number;
+  coachRate?: number;
+  coach?: Coach & { user: Pick<User, 'id' | 'name' | 'email' | 'phone'> };
   createdAt: string;
   updatedAt: string;
   slot?: Slot & { availability?: Availability & { venue?: Venue } };
   user?: User;
+  additionalSlots?: ReservationSlotEntry[];
 }
 
 export interface Facility {

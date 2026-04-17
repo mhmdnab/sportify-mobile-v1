@@ -21,13 +21,14 @@ type Nav = NativeStackNavigationProp<OwnerReservationsStackParamList, 'OwnerRese
 type FilterTab = 'all' | ReservationStatus;
 
 const filterTabs: { key: FilterTab; labelKey: string }[] = [
-  { key: 'all', labelKey: 'owner.all' },
   { key: ReservationStatus.PENDING, labelKey: 'owner.pending' },
   { key: ReservationStatus.CONFIRMED, labelKey: 'owner.confirmed' },
   { key: ReservationStatus.CANCELLED, labelKey: 'owner.cancelled' },
-  { key: ReservationStatus.PLAYED, labelKey: 'owner.played' },
   { key: ReservationStatus.PAID, labelKey: 'owner.paid' },
+  { key: 'all', labelKey: 'owner.all' },
 ];
+
+const TODAY_ONLY_FILTERS: FilterTab[] = [ReservationStatus.CANCELLED, ReservationStatus.PAID];
 
 const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: '#FF9500',
@@ -35,6 +36,9 @@ const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.CANCELLED]: colors.error,
   [ReservationStatus.PLAYED]: '#007AFF',
   [ReservationStatus.PAID]: '#6B7280',
+  [ReservationStatus.REJECTED]: colors.error,
+  [ReservationStatus.COACH_PENDING]: '#F97316',
+  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
 };
 
 function OwnerReservationCard({
@@ -53,6 +57,17 @@ function OwnerReservationCard({
   const slotTime = reservation.slot
     ? `${formatTime(reservation.slot.startTime)} - ${formatTime(reservation.slot.endTime)}`
     : '';
+
+  const venuePrice = reservation.slot?.price ?? 0;
+  const slotDurationHours = (() => {
+    if (!reservation.slot?.startTime || !reservation.slot?.endTime) return 1;
+    const [sh, sm] = (reservation.slot.startTime as string).split(':').map(Number);
+    const [eh, em] = (reservation.slot.endTime as string).split(':').map(Number);
+    return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+  })();
+  const coachFee = (reservation as any).withCoach && (reservation as any).coachRate
+    ? (reservation as any).coachRate * slotDurationHours : 0;
+  const total = venuePrice + coachFee;
 
   return (
     <TouchableOpacity
@@ -95,14 +110,98 @@ function OwnerReservationCard({
               <Text style={[cardStyles.detailText, { color: tc.textSecondary }]}>{slotTime}</Text>
             </View>
           ) : null}
-          {reservation.slot?.price ? (
+          {total > 0 ? (
             <View style={cardStyles.detailRow}>
               <Ionicons name="cash-outline" size={13} color={tc.textHint} />
               <Text style={[cardStyles.priceText, { color: colors.navy }]}>
-                {formatPrice(reservation.slot.price)}
+                {formatPrice(total)}{(reservation as any).withCoach ? ' (with coach)' : ''}
               </Text>
             </View>
           ) : null}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function slotDur(r: Reservation): number {
+  if (!r.slot?.startTime || !r.slot?.endTime) return 1;
+  const [sh, sm] = (r.slot.startTime as string).split(':').map(Number);
+  const [eh, em] = (r.slot.endTime as string).split(':').map(Number);
+  return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+}
+
+interface GroupEntry { key: string; groupId?: string; reservations: Reservation[] }
+
+function groupReservations(list: Reservation[]): GroupEntry[] {
+  const result: GroupEntry[] = [];
+  const seen = new Set<string>();
+  for (const r of list) {
+    const gId = (r as any).groupId as string | undefined;
+    if (gId) {
+      if (seen.has(gId)) continue;
+      seen.add(gId);
+      result.push({ key: `group-${gId}`, groupId: gId, reservations: list.filter((x) => (x as any).groupId === gId) });
+    } else {
+      result.push({ key: `single-${r.id}`, reservations: [r] });
+    }
+  }
+  return result;
+}
+
+function OwnerGroupCard({ entry, onPress, tc }: { entry: GroupEntry; onPress: () => void; tc: any }) {
+  const { t } = useTranslation();
+  if (entry.reservations.length === 1) {
+    return <OwnerReservationCard reservation={entry.reservations[0]} onPress={onPress} tc={tc} />;
+  }
+  const first = entry.reservations[0];
+  const statusColor = statusColors[first.status] || colors.textHint;
+  const userName = first.user?.name || t('owner.user');
+  const venueName = first.slot?.availability?.venue?.name || t('owner.venue');
+  const totalVenue = entry.reservations.reduce((acc, r) => acc + (r.slot?.price ?? 0), 0);
+  const totalCoach = entry.reservations.reduce((acc, r) => {
+    return acc + ((r as any).withCoach && (r as any).coachRate ? (r as any).coachRate * slotDur(r) : 0);
+  }, 0);
+  const total = totalVenue + totalCoach;
+  const withCoach = entry.reservations.some((r) => (r as any).withCoach);
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[cardStyles.container, { backgroundColor: tc.cardBg }]}>
+      <View style={[cardStyles.statusBar, { backgroundColor: statusColor }]} />
+      <View style={cardStyles.content}>
+        <View style={cardStyles.topRow}>
+          <View style={cardStyles.userInfo}>
+            <View style={[cardStyles.avatar, { backgroundColor: `${statusColor}20` }]}>
+              <Ionicons name="person" size={14} color={statusColor} />
+            </View>
+            <Text style={[cardStyles.userName, { color: tc.textPrimary }]} numberOfLines={1}>{userName}</Text>
+          </View>
+          <View style={[cardStyles.badge, { backgroundColor: `${statusColor}15` }]}>
+            <Text style={[cardStyles.badgeText, { color: statusColor }]}>{first.status}</Text>
+          </View>
+        </View>
+        <Text style={[cardStyles.venue, { color: tc.textSecondary }]} numberOfLines={1}>{venueName}</Text>
+        <View style={cardStyles.details}>
+          <View style={cardStyles.detailRow}>
+            <Ionicons name="layers-outline" size={13} color={statusColor} />
+            <Text style={[cardStyles.detailText, { color: statusColor, fontWeight: '600' }]}>
+              {entry.reservations.length} slots · {formatDate(first.slotDate)}
+            </Text>
+          </View>
+          {entry.reservations.map((r) => (
+            <View key={r.id} style={cardStyles.detailRow}>
+              <Ionicons name="time-outline" size={12} color={tc.textHint} />
+              <Text style={[cardStyles.detailText, { color: tc.textSecondary }]}>
+                {r.slot ? `${formatTime(r.slot.startTime)} – ${formatTime(r.slot.endTime)}` : ''}
+              </Text>
+            </View>
+          ))}
+          {total > 0 && (
+            <View style={cardStyles.detailRow}>
+              <Ionicons name="cash-outline" size={13} color={tc.textHint} />
+              <Text style={[cardStyles.priceText, { color: colors.navy }]}>{formatPrice(total)}{withCoach ? ' (with coach)' : ''}</Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -121,66 +220,19 @@ const cardStyles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  statusBar: {
-    width: 4,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 8,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userName: {
-    fontSize: 15,
-    fontWeight: '600',
-    flex: 1,
-  },
-  badge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  venue: {
-    fontSize: 13,
-    marginBottom: 6,
-  },
-  details: {
-    gap: 3,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  detailText: {
-    fontSize: 12,
-  },
-  priceText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  statusBar: { width: 4 },
+  content: { flex: 1, padding: spacing.md },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  userInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 },
+  avatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  userName: { fontSize: 15, fontWeight: '600', flex: 1 },
+  badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeText: { fontSize: 10, fontWeight: '700', textTransform: 'capitalize' },
+  venue: { fontSize: 13, marginBottom: 6 },
+  details: { gap: 3 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  detailText: { fontSize: 12 },
+  priceText: { fontSize: 12, fontWeight: '600' },
 });
 
 export function OwnerReservationsScreen() {
@@ -191,7 +243,7 @@ export function OwnerReservationsScreen() {
   const { reservations, isLoading, fetchOwnerReservations, fetchMore, hasNext } =
     useOwnerReservationsStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterTab>(ReservationStatus.PENDING);
 
   useEffect(() => {
     fetchOwnerReservations();
@@ -203,10 +255,15 @@ export function OwnerReservationsScreen() {
     setRefreshing(false);
   }, []);
 
-  const filtered =
-    activeFilter === 'all'
-      ? reservations
-      : reservations.filter((r) => r.status === activeFilter);
+  const today = new Date().toISOString().split('T')[0];
+  const filtered = reservations
+    .filter((r) => activeFilter === 'all' || r.status === activeFilter)
+    .filter((r) => {
+      if (TODAY_ONLY_FILTERS.includes(activeFilter)) {
+        return r.slotDate?.startsWith(today);
+      }
+      return true;
+    });
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: tc.screenBg }]}>
@@ -215,10 +272,11 @@ export function OwnerReservationsScreen() {
         <Text style={[styles.title, { color: tc.textPrimary }]}>{t('owner.reservations')}</Text>
       </View>
 
-      {/* Filter chips */}
+      {/* Status filter chips */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
         contentContainerStyle={styles.filterRow}
       >
         {filterTabs.map((item) => {
@@ -253,15 +311,18 @@ export function OwnerReservationsScreen() {
       </ScrollView>
 
       <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id.toString()}
+        data={groupReservations(filtered)}
+        keyExtractor={(item) => item.key}
         renderItem={({ item }) => (
-          <OwnerReservationCard
-            reservation={item}
+          <OwnerGroupCard
+            entry={item}
             tc={tc}
-            onPress={() => navigation.navigate('OwnerReservationDetail', { reservationId: item.id })}
+            onPress={() => navigation.navigate('OwnerReservationDetail', {
+              reservationId: item.reservations[0].id,
+            })}
           />
         )}
+        style={{ flex: 1 }}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         onEndReached={() => hasNext && fetchMore()}
@@ -292,10 +353,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
   },
+  filterScroll: { flexGrow: 0, flexShrink: 0, marginBottom: spacing.md },
   filterRow: {
     paddingHorizontal: spacing.screenPadding,
     gap: 8,
-    marginBottom: spacing.md,
+    alignItems: 'center' as const,
   },
   filterChip: {
     height: 36,

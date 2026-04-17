@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Switch, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  Switch,
+  RefreshControl,
+  StatusBar,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,30 +22,33 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useThemeStore } from '../../stores/theme.store';
 import { ProfileStackParamList } from '../../types/navigation';
 import { useTranslation } from 'react-i18next';
-import { useUIStore } from '../../stores/ui.store';
+
 import { useLanguageStore } from '../../stores/language.store';
-import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 import { pickAndUploadImage } from '../../lib/upload';
 import { api } from '../../lib/api';
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList, 'ProfileScreen'>;
 
-const AVATAR_SIZE = 120;
+const AVATAR_SIZE = 96;
 
 export function ProfileScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const openNotifications = useUIStore((s) => s.openNotifications);
+
   const isDark = useThemeStore((s) => s.isDark);
   const { locale, setLocale } = useLanguageStore();
   const toggleDarkMode = useThemeStore((s) => s.toggleDarkMode);
   const tc = useThemeColors();
-
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const screenBg = isDark ? '#0A0F1E' : '#F0F2F8';
+  const cardBg = isDark ? '#0C1832' : '#FFFFFF';
+  const heroBg = isDark ? '#0B1740' : colors.navy;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -52,9 +65,7 @@ export function ProfileScreen() {
         await refreshProfile();
       }
     } catch {}
-    finally {
-      setUploadingAvatar(false);
-    }
+    finally { setUploadingAvatar(false); }
   };
 
   const handleLogout = async () => {
@@ -66,144 +77,193 @@ export function ProfileScreen() {
     ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const headerBg = isDark ? '#040B1E' : colors.navy;
-
-  const cardBg = tc.cardBg;
-  const textColor = tc.textPrimary;
-  const subTextColor = tc.textSecondary;
-
   return (
-    <View style={[styles.container, { backgroundColor: tc.screenBg }]}>
-      <BackgroundShapes isDark={isDark} />
-
-      {/* Fixed header — title + curve + avatar all together */}
-      <SafeAreaView edges={['top']} style={{ backgroundColor: headerBg }}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('profile.profile')}</Text>
-          <View style={{ width: 24 }} />
-        </View>
-      </SafeAreaView>
-      <View style={[styles.headerBg, { backgroundColor: headerBg }]} />
-      <View style={styles.avatarWrapper}>
-        <View style={[styles.avatarBorder, { borderColor: cardBg, backgroundColor: cardBg }]}>
-          {user?.image ? (
-            <Image source={{ uri: user.image }} style={styles.avatarImage} contentFit="cover" />
-          ) : (
-            <View style={[styles.avatarImage, styles.avatarFallback]}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity style={styles.cameraBtn} onPress={handleAvatarUpload} disabled={uploadingAvatar}>
-          <Ionicons name={uploadingAvatar ? 'hourglass-outline' : 'camera'} size={14} color="#FFF" />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: screenBg }]}>
+      <StatusBar barStyle="light-content" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.navy} />}
       >
-        {/* General Information */}
-        <View style={[styles.section, { backgroundColor: cardBg }]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="information-circle-outline" size={20} color={textColor} />
-              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.generalInfo')}</Text>
+        {/* ── Hero card ── */}
+        <View style={[styles.hero, { backgroundColor: heroBg, paddingTop: insets.top + 12 }]}>
+          {/* Decorative circles */}
+          <View style={[styles.decoCircle, { width: 200, height: 200, right: -40, top: -60 }]} />
+          <View style={[styles.decoCircle, { width: 130, height: 130, left: -30, bottom: -50, opacity: 0.06 }]} />
+
+          {/* Back button */}
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={20} color="rgba(255,255,255,0.9)" />
+          </TouchableOpacity>
+
+          {/* Avatar */}
+          <View style={styles.avatarContainer}>
+            <View style={[styles.avatarRing, { borderColor: 'rgba(255,255,255,0.25)' }]}>
+              {user?.image ? (
+                <Image source={{ uri: user.image }} style={styles.avatarImg} contentFit="cover" />
+              ) : (
+                <View style={[styles.avatarImg, styles.avatarFallback]}>
+                  <Text style={styles.avatarInitials}>{initials}</Text>
+                </View>
+              )}
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('EditProfile')}>
-              <Ionicons name="pencil-outline" size={20} color={textColor} />
+            <TouchableOpacity style={styles.cameraBtn} onPress={handleAvatarUpload} disabled={uploadingAvatar}>
+              <Ionicons name={uploadingAvatar ? 'hourglass-outline' : 'camera'} size={13} color="#fff" />
             </TouchableOpacity>
           </View>
-          <View style={styles.sectionContent}>
-            <InfoRow label={t('profile.username')} value={user?.name || t('common.user')} textColor={textColor} subColor={subTextColor} />
-            <InfoRow label={t('profile.email')} value={user?.email || '-'} textColor={textColor} subColor={subTextColor} />
-            <InfoRow label={t('profile.phone')} value={user?.phone || '-'} textColor={textColor} subColor={subTextColor} />
-          </View>
+
+          {/* Name + role */}
+          <Text style={styles.heroName}>{user?.name ?? 'User'}</Text>
+          <Text style={styles.heroEmail}>{user?.email ?? ''}</Text>
+
         </View>
 
-        {/* Quick Actions */}
-        <View style={[styles.quickActions, { backgroundColor: cardBg }]}>
-          <QuickAction icon="heart-outline" label={t('profile.favorite')} onPress={() => {}} color={textColor} />
-          <QuickAction icon="calendar-outline" label={t('profile.reservation')} onPress={() => (navigation as any).navigate('BookingsTab')} color={textColor} />
-          <QuickAction icon="notifications-outline" label={t('profile.notification')} onPress={openNotifications} color={textColor} />
+        {/* ── Quick shortcuts ── */}
+        <View style={[styles.shortcutsRow, { marginTop: -1 }]}>
+          <ShortcutBtn
+            icon="calendar-outline"
+            label="Reservations"
+            iconBg="#EEF0FF"
+            iconColor="#0B1A3E"
+            onPress={() => (navigation as any).navigate('BookingsTab')}
+            cardBg={cardBg}
+          />
+          <ShortcutBtn
+            icon="pencil-outline"
+            label="Edit Profile"
+            iconBg="#E8F5E9"
+            iconColor="#22C55E"
+            onPress={() => navigation.navigate('EditProfile')}
+            cardBg={cardBg}
+          />
         </View>
 
-        {/* Appearance */}
-        <View style={[styles.section, { backgroundColor: cardBg }]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={20} color={textColor} />
-              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.appearance')}</Text>
-            </View>
-          </View>
-          <View style={styles.darkModeRow}>
-            <View style={styles.darkModeInfo}>
-              <Text style={[styles.infoLabel, { color: textColor }]}>{t('profile.darkMode')}</Text>
-              <Text style={[styles.infoValue, { color: subTextColor }]}>
-                {isDark ? t('profile.on') : t('profile.off')}
-              </Text>
-            </View>
-            <Switch
-              value={isDark}
-              onValueChange={toggleDarkMode}
-              trackColor={{ false: '#D1D1D6', true: colors.navy }}
-              thumbColor="#FFF"
-              ios_backgroundColor="#D1D1D6"
-            />
-          </View>
-        </View>
+        <View style={styles.body}>
+          {/* ── General Info ── */}
+          <SectionCard
+            icon="person-outline"
+            iconBg="#EEF0FF"
+            iconColor="#0B1A3E"
+            title={t('profile.generalInfo')}
+            cardBg={cardBg}
+            tc={tc}
+            action={
+              <TouchableOpacity
+                style={[styles.editPill, { backgroundColor: isDark ? 'rgba(11,26,62,0.15)' : '#EEF0FF' }]}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Ionicons name="pencil-outline" size={13} color="#0B1A3E" />
+                <Text style={styles.editPillText}>Edit</Text>
+              </TouchableOpacity>
+            }
+          >
+            <InfoRow icon="person-circle-outline" label={t('profile.username')} value={user?.name || '—'} tc={tc} />
+            <View style={[styles.rowDivider, { backgroundColor: tc.border }]} />
+            <InfoRow icon="mail-outline" label={t('profile.email')} value={user?.email || '—'} tc={tc} />
+            {user?.phone ? (
+              <>
+                <View style={[styles.rowDivider, { backgroundColor: tc.border }]} />
+                <InfoRow icon="call-outline" label={t('profile.phone')} value={user.phone} tc={tc} />
+              </>
+            ) : null}
+          </SectionCard>
 
-        {/* Language */}
-        <View style={[styles.section, { backgroundColor: cardBg }]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="language-outline" size={20} color={textColor} />
-              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.language')}</Text>
+          {/* ── Appearance ── */}
+          <SectionCard
+            icon={isDark ? 'moon' : 'sunny-outline'}
+            iconBg="#FFF8E1"
+            iconColor="#F59E0B"
+            title={t('profile.appearance')}
+            cardBg={cardBg}
+            tc={tc}
+          >
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleLeft}>
+                <Text style={[styles.toggleLabel, { color: tc.textPrimary }]}>{t('profile.darkMode')}</Text>
+                <Text style={[styles.toggleSub, { color: tc.textHint }]}>
+                  {isDark ? t('profile.on') : t('profile.off')}
+                </Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={toggleDarkMode}
+                trackColor={{ false: '#D1D1D6', true: colors.navy }}
+                thumbColor="#FFF"
+                ios_backgroundColor="#D1D1D6"
+              />
             </View>
-          </View>
-          <View style={styles.languageRow}>
-            <TouchableOpacity
-              style={[styles.languageOption, locale === 'en' && styles.languageOptionActive]}
-              onPress={() => setLocale('en')}
-            >
-              <Text style={[styles.languageText, locale === 'en' && styles.languageTextActive]}>
-                {t('profile.english')}
-              </Text>
+          </SectionCard>
+
+          {/* ── Language ── */}
+          <SectionCard
+            icon="language-outline"
+            iconBg="#E0F7FA"
+            iconColor="#0891B2"
+            title={t('profile.language')}
+            cardBg={cardBg}
+            tc={tc}
+          >
+            <View style={styles.langRow}>
+              <TouchableOpacity
+                style={[
+                  styles.langBtn,
+                  { borderColor: locale === 'en' ? colors.navy : tc.border },
+                  locale === 'en' && styles.langBtnActive,
+                ]}
+                onPress={() => setLocale('en')}
+              >
+                <Text style={[styles.langBtnText, { color: locale === 'en' ? colors.navy : tc.textSecondary }]}>
+                  English
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.langBtn,
+                  { borderColor: locale === 'ar' ? colors.navy : tc.border },
+                  locale === 'ar' && styles.langBtnActive,
+                ]}
+                onPress={() => setLocale('ar')}
+              >
+                <Text style={[styles.langBtnText, { color: locale === 'ar' ? colors.navy : tc.textSecondary }]}>
+                  العربية
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </SectionCard>
+
+          {/* ── Security ── */}
+          <SectionCard
+            icon="lock-closed-outline"
+            iconBg="#FCE4EC"
+            iconColor="#E91E63"
+            title={t('profile.securityInfo')}
+            cardBg={cardBg}
+            tc={tc}
+          >
+            <TouchableOpacity style={styles.menuRow}>
+              <View style={styles.menuRowLeft}>
+                <View style={[styles.menuRowIconBox, { backgroundColor: '#FCE4EC' }]}>
+                  <Ionicons name="key-outline" size={15} color="#E91E63" />
+                </View>
+                <Text style={[styles.menuRowLabel, { color: tc.textPrimary }]}>{t('profile.changePassword')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={tc.textHint} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.languageOption, locale === 'ar' && styles.languageOptionActive]}
-              onPress={() => setLocale('ar')}
-            >
-              <Text style={[styles.languageText, locale === 'ar' && styles.languageTextActive]}>
-                {t('profile.arabic')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </SectionCard>
 
-        {/* Security Information */}
-        <View style={[styles.section, { backgroundColor: cardBg }]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="lock-closed-outline" size={20} color={textColor} />
-              <Text style={[styles.sectionTitle, { color: textColor }]}>{t('profile.securityInfo')}</Text>
+          {/* ── Logout ── */}
+          <TouchableOpacity
+            style={[styles.logoutCard, { backgroundColor: cardBg }]}
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.menuRowIconBox, { backgroundColor: 'rgba(255,68,68,0.1)' }]}>
+              <Ionicons name="log-out-outline" size={16} color={colors.error} />
             </View>
-          </View>
-          <View style={styles.sectionContent}>
-            <TouchableOpacity>
-              <Text style={[styles.infoLabel, { color: textColor }]}>{t('profile.changePassword')}</Text>
-            </TouchableOpacity>
-          </View>
+            <Text style={[styles.logoutText, { color: colors.error }]}>{t('profile.logout')}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.error} style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
         </View>
-
-        {/* Logout */}
-        <TouchableOpacity style={[styles.logoutSection, { backgroundColor: cardBg }]} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color={colors.error} />
-          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
-        </TouchableOpacity>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -211,226 +271,280 @@ export function ProfileScreen() {
   );
 }
 
-function InfoRow({ label, value, textColor, subColor }: { label: string; value: string; textColor: string; subColor: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={[styles.infoLabel, { color: textColor }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: subColor }]}>{value}</Text>
-    </View>
-  );
-}
+// ── Sub-components ──
 
-function QuickAction({ icon, label, onPress, color }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; color: string }) {
+function ShortcutBtn({
+  icon, label, iconBg, iconColor, onPress, cardBg,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  iconBg: string;
+  iconColor: string;
+  onPress: () => void;
+  cardBg: string;
+}) {
   return (
-    <TouchableOpacity style={styles.quickActionItem} onPress={onPress}>
-      <Ionicons name={icon} size={20} color={color} />
-      <Text style={[styles.quickActionLabel, { color }]}>{label}</Text>
+    <TouchableOpacity style={[styles.shortcutCard, { backgroundColor: cardBg }]} onPress={onPress} activeOpacity={0.8}>
+      <View style={[styles.shortcutIconBox, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={20} color={iconColor} />
+      </View>
+      <Text style={[styles.shortcutLabel, { color: iconColor }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
+function SectionCard({
+  icon, iconBg, iconColor, title, children, cardBg, tc, action,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  children: React.ReactNode;
+  cardBg: string;
+  tc: any;
+  action?: React.ReactNode;
+}) {
+  return (
+    <View style={[styles.sectionCard, { backgroundColor: cardBg }]}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionIconBox, { backgroundColor: iconBg }]}>
+            <Ionicons name={icon} size={16} color={iconColor} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: tc.textPrimary }]}>{title}</Text>
+        </View>
+        {action}
+      </View>
+      <View style={styles.sectionBody}>{children}</View>
+    </View>
+  );
+}
+
+function InfoRow({
+  icon, label, value, tc,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  tc: any;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <Ionicons name={icon} size={15} color={tc.textHint} style={{ marginTop: 1 }} />
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.infoLabel, { color: tc.textHint }]}>{label}</Text>
+        <Text style={[styles.infoValue, { color: tc.textPrimary }]}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  container: { flex: 1 },
+
+  // Hero
+  hero: {
     paddingHorizontal: spacing.screenPadding,
-    paddingVertical: 14,
+    paddingBottom: 28,
+    overflow: 'hidden',
+  },
+  decoCircle: {
+    position: 'absolute',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   backBtn: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  headerBg: {
-    height: 60,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginTop: -1,
-  },
-  avatarWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
-    marginTop: -AVATAR_SIZE / 2,
-    zIndex: 10,
-    marginBottom: 16,
+    justifyContent: 'center',
+    marginBottom: 20,
   },
-  avatarBorder: {
-    width: AVATAR_SIZE + 8,
-    height: AVATAR_SIZE + 8,
-    borderRadius: (AVATAR_SIZE + 8) / 2,
-    borderWidth: 4,
+  avatarContainer: {
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  avatarRing: {
+    width: AVATAR_SIZE + 6,
+    height: AVATAR_SIZE + 6,
+    borderRadius: (AVATAR_SIZE + 6) / 2,
+    borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarImage: {
+  avatarImg: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
   },
   avatarFallback: {
-    backgroundColor: colors.navy,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitials: {
-    color: '#FFF',
-    fontSize: 40,
-    fontWeight: '700',
-  },
+  avatarInitials: { color: '#FFF', fontSize: 34, fontWeight: '800' },
   cameraBtn: {
     position: 'absolute',
-    bottom: 4,
-    right: '35%',
-    width: 32,
-    height: 32,
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  heroName: {
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  heroEmail: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+
+  // Shortcuts
+  shortcutsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  shortcutCard: {
+    flex: 1,
     borderRadius: 16,
-    backgroundColor: '#888',
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 8,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
+  },
+  shortcutIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  section: {
-    marginHorizontal: spacing.screenPadding,
-    borderRadius: 16,
-    marginBottom: 12,
+  shortcutLabel: { fontSize: 11, fontWeight: '700' },
+
+  // Body
+  body: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: 14,
+    gap: 12,
+  },
+
+  // Section card
+  sectionCard: {
+    borderRadius: 18,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
     }),
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
-  sectionTitleRow: {
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: { fontSize: 15, fontWeight: '700' },
+  sectionBody: { paddingHorizontal: 16, paddingBottom: 16 },
+
+  // Edit pill
+  editPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  sectionContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  infoRow: {
-    marginTop: 12,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  infoValue: {
-    fontSize: 14,
-    marginTop: 2,
-  },
-  darkModeRow: {
+  editPillText: { fontSize: 12, fontWeight: '700', color: '#0B1A3E' },
+
+  // Info row
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 8 },
+  infoLabel: { fontSize: 11, fontWeight: '500', marginBottom: 2 },
+  infoValue: { fontSize: 14, fontWeight: '600' },
+  rowDivider: { height: 1, marginLeft: 28 },
+
+  // Toggle row
+  toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 4,
   },
-  darkModeInfo: {
-    gap: 2,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 24,
-    marginHorizontal: spacing.screenPadding,
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  quickActionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  quickActionLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  logoutSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: spacing.screenPadding,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.error,
-  },
-  languageRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  languageOption: {
+  toggleLeft: { gap: 2 },
+  toggleLabel: { fontSize: 14, fontWeight: '600' },
+  toggleSub: { fontSize: 12 },
+
+  // Language
+  langRow: { flexDirection: 'row', gap: 10, paddingTop: 4 },
+  langBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: colors.border,
     alignItems: 'center',
   },
-  languageOptionActive: {
-    borderColor: colors.navy,
-    backgroundColor: `${colors.navy}10`,
+  langBtnActive: { backgroundColor: `${colors.navy}10` },
+  langBtnText: { fontSize: 14, fontWeight: '600' },
+
+  // Menu row
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
   },
-  languageText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
+  menuRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuRowIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  languageTextActive: {
-    color: colors.navy,
-    fontWeight: '700',
+  menuRowLabel: { fontSize: 14, fontWeight: '600' },
+
+  // Logout
+  logoutCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
   },
+  logoutText: { fontSize: 15, fontWeight: '700' },
 });

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { I18nManager, Alert } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { storageGet, storageSet } from '../lib/secure-store';
 import i18n from '../i18n';
 
 const LOCALE_KEY = 'sportify_locale';
@@ -19,7 +19,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
   setLocale: async (locale: string) => {
     const isRTL = locale === 'ar';
     await i18n.changeLanguage(locale);
-    await SecureStore.setItemAsync(LOCALE_KEY, locale);
+    await storageSet(LOCALE_KEY, locale);
 
     set({ locale, isRTL });
 
@@ -37,7 +37,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
   },
 
   loadLocale: async () => {
-    const savedLocale = await SecureStore.getItemAsync(LOCALE_KEY);
+    const savedLocale = await storageGet(LOCALE_KEY);
     if (savedLocale && savedLocale !== i18n.language) {
       const isRTL = savedLocale === 'ar';
       await i18n.changeLanguage(savedLocale);

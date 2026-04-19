@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { colors } from '../../../theme/colors';
 import { useThemeColors } from '../../../theme/useThemeColors';
 import { useThemeStore } from '../../../stores/theme.store';
 import { useOwnerReservationsStore } from '../../../stores/owner-reservations.store';
+import { useAssistantStore } from '../../../stores/assistant.store';
 import { spacing, radius } from '../../../theme/spacing';
 import { BackgroundShapes } from '../../../components/ui/BackgroundShapes';
 import { OwnerReservationsStackParamList } from '../../../types/navigation';
@@ -245,9 +246,18 @@ export function OwnerReservationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>(ReservationStatus.PENDING);
 
+  const setScreen = useAssistantStore((s) => s.setScreen);
+
   useEffect(() => {
     fetchOwnerReservations();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreen('owner_reservations');
+      return () => setScreen('general');
+    }, []),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

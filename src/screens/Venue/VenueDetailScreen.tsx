@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Share,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImageCarousel } from '../../components/ui/ImageCarousel';
@@ -20,6 +21,7 @@ import { useThemeColors } from '../../theme/useThemeColors';
 import { useThemeStore } from '../../stores/theme.store';
 import { spacing } from '../../theme/spacing';
 import { useVenuesStore } from '../../stores/venues.store';
+import { useAssistantStore } from '../../stores/assistant.store';
 import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 import { HomeStackParamList } from '../../types/navigation';
 import { useTranslation } from 'react-i18next';
@@ -34,9 +36,22 @@ export function VenueDetailScreen({ route, navigation }: Props) {
   const tc = useThemeColors();
   const isDark = useThemeStore((s) => s.isDark);
 
+  const setScreen = useAssistantStore((s) => s.setScreen);
+
   useEffect(() => {
     fetchVenueById(venueId);
   }, [venueId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreen('venue', {
+        venueName: currentVenue?.name,
+        sport: currentVenue?.branch?.sport?.name,
+        price: currentVenue?.price,
+      });
+      return () => setScreen('general');
+    }, [currentVenue?.name, currentVenue?.branch?.sport?.name, currentVenue?.price]),
+  );
 
   const handleLocationPress = () => {
     if (!currentVenue?.branch?.address) return;
@@ -139,6 +154,11 @@ export function VenueDetailScreen({ route, navigation }: Props) {
             </View>
           )}
 
+          {/* Description */}
+          {venue.description ? (
+            <Text style={[styles.description, { color: tc.textSecondary }]}>{venue.description}</Text>
+          ) : null}
+
           {/* Book Now button */}
           <TouchableOpacity style={[styles.bookBtn, { backgroundColor: isDark ? colors.navyLight : colors.navy }]} onPress={handleBookNow} activeOpacity={0.8}>
             <Text style={styles.bookBtnText}>{t('venue.bookNow')}</Text>
@@ -196,6 +216,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textSecondary,
     fontWeight: '500',
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 8,
+    marginBottom: 8,
   },
   bookBtn: {
     backgroundColor: colors.navy,

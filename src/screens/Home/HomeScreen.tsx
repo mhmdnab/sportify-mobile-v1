@@ -30,6 +30,7 @@ import { HomeHeader } from './components/HomeHeader';
 import { ProfileDrawer } from '../../components/ProfileDrawer';
 import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
 import { useUIStore } from '../../stores/ui.store';
+import { useAssistantStore } from '../../stores/assistant.store';
 import { Reservation } from '../../types/api';
 import { formatTime } from '../../utils/date';
 
@@ -150,10 +151,14 @@ export function HomeScreen() {
     overflow: 'hidden' as const,
   }));
 
+  const setScreen = useAssistantStore((s) => s.setScreen);
+
   useFocusEffect(
     useCallback(() => {
       fetchOwnReservations();
       fetchNotifications();
+      setScreen('home');
+      return () => setScreen('general');
     }, []),
   );
 

@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown,
@@ -27,6 +28,7 @@ import { useThemeColors } from '../../../theme/useThemeColors';
 import { useThemeStore } from '../../../stores/theme.store';
 import { useAuthStore } from '../../../stores/auth.store';
 import { useOwnerDashboardStore } from '../../../stores/owner-dashboard.store';
+import { useAssistantStore } from '../../../stores/assistant.store';
 import { spacing, radius } from '../../../theme/spacing';
 import { Reservation, ReservationStatus } from '../../../types/api';
 import { formatTime } from '../../../utils/date';
@@ -669,7 +671,16 @@ export function OwnerDashboardScreen() {
   } = useOwnerDashboardStore();
   const [refreshing, setRefreshing] = useState(false);
 
+  const setScreen = useAssistantStore((s) => s.setScreen);
+
   useEffect(() => { fetchDashboardData(); }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreen('owner_dashboard', { branchCount, venueCount, todayRevenue, todayConfirmed, todayPending });
+      return () => setScreen('general');
+    }, [branchCount, venueCount, todayRevenue, todayConfirmed, todayPending]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

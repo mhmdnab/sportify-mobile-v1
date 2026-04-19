@@ -11,7 +11,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useThemeColors } from '../../../theme/useThemeColors';
 import { useThemeStore } from '../../../stores/theme.store';
 import { useCoachReservationsStore } from '../../../stores/coach-reservations.store';
@@ -30,8 +30,10 @@ type FilterTab = ReservationStatus | 'all';
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: ReservationStatus.COACH_PENDING, label: 'Pending' },
   { key: ReservationStatus.CONFIRMED, label: 'Confirmed' },
-  { key: ReservationStatus.REJECTED, label: 'By Venue' },
+  { key: ReservationStatus.PAID, label: 'Paid' },
+  { key: ReservationStatus.REJECTED, label: 'Rejected' },
   { key: ReservationStatus.COACH_REJECTED, label: 'Declined' },
+  { key: ReservationStatus.EXPIRED, label: 'Expired' },
   { key: 'all', label: 'All' },
 ];
 
@@ -43,7 +45,8 @@ const STATUS_COLOR: Record<string, string> = {
   [ReservationStatus.PAID]: '#6B7280',
   [ReservationStatus.REJECTED]: '#FF4444',
   [ReservationStatus.COACH_PENDING]: '#FF9500',
-  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
+  [ReservationStatus.COACH_REJECTED]: '#EF4444',
+  [ReservationStatus.EXPIRED]: '#9CA3AF',
 };
 
 function statusLabel(s: ReservationStatus): string {
@@ -87,7 +90,7 @@ function ReservationCard({
         <View style={cardStyles.topRow}>
           <View style={cardStyles.userInfo}>
             <View style={[cardStyles.avatar, { backgroundColor: `${statusColor}20` }]}>
-              <Ionicons name="person" size={14} color={statusColor} />
+              <FontAwesome6 name="people-group" size={12} color={statusColor} />
             </View>
             <Text style={[cardStyles.userName, { color: tc.textPrimary }]} numberOfLines={1}>{userName}</Text>
           </View>
@@ -110,7 +113,7 @@ function ReservationCard({
           {total > 0 ? (
             <View style={cardStyles.detailRow}>
               <Ionicons name="cash-outline" size={13} color={tc.textHint} />
-              <Text style={[cardStyles.priceText, { color: colors.navy }]}>
+              <Text style={[cardStyles.priceText, { color: isDark ? '#A2B8FF' : colors.navy }]}>
                 {formatPrice(slotPrice)} + {formatPrice(coachFee)} coach = {formatPrice(total)}
               </Text>
             </View>
@@ -203,10 +206,14 @@ export function CoachBookingsScreen() {
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tab, active && styles.tabActive]}
+              style={[
+                styles.tab,
+                { backgroundColor: isDark ? 'rgba(162,184,255,0.07)' : 'rgba(11,26,62,0.08)' },
+                active && { backgroundColor: isDark ? '#162B5C' : '#0B1A3E' },
+              ]}
               onPress={() => handleTabChange(tab.key)}
             >
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+              <Text style={[styles.tabText, { color: active ? '#fff' : (isDark ? '#8A94B0' : '#0B1A3E') }]}>{tab.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -247,9 +254,9 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 4 },
   title: { fontSize: 22, fontWeight: '800' },
   tabBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: 8 },
-  tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: 'rgba(11,26,62,0.08)' },
-  tabActive: { backgroundColor: '#0B1A3E' },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#0B1A3E' },
+  tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  tabActive: {},
+  tabText: { fontSize: 13, fontWeight: '600' },
   tabTextActive: { color: '#fff' },
   list: { padding: spacing.lg, paddingTop: spacing.sm, paddingBottom: 40 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },

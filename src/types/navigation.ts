@@ -47,6 +47,8 @@ export type NotificationsStackParamList = {
 export type ProfileStackParamList = {
   ProfileScreen: undefined;
   EditProfile: undefined;
+  MyReservations: undefined;
+  ReservationDetail: { reservationId: number };
   FAQs: undefined;
   Blogs: undefined;
   BlogDetail: { blogId: number };
@@ -57,6 +59,10 @@ export type ProfileStackParamList = {
 // Owner navigation types
 export type OwnerDashboardStackParamList = {
   OwnerDashboard: undefined;
+  MyVenuesScreen: undefined;
+  VenueDetail: { venueId: number };
+  Reservation: { venueId: number; venueName?: string };
+  BranchDetail: { branchId: number };
 };
 
 export type OwnerBranchesStackParamList = {
@@ -81,6 +87,10 @@ export type OwnerScheduleStackParamList = {
 // Manager navigation types
 export type ManagerDashboardStackParamList = {
   ManagerDashboard: undefined;
+  MyVenuesScreen: undefined;
+  VenueDetail: { venueId: number };
+  Reservation: { venueId: number; venueName?: string };
+  BranchDetail: { branchId: number };
 };
 
 export type ManagerReservationsStackParamList = {
@@ -109,6 +119,11 @@ export type ManagerScheduleStackParamList = {
 // Coach navigation types
 export type CoachDashboardStackParamList = {
   CoachDashboard: undefined;
+  StadiumsScreen: undefined;
+  VenueDetail: { venueId: number };
+  BranchDetail: { branchId: number };
+  Reservation: { venueId: number };
+  ReservationDetail: { reservationId: number };
 };
 
 export type CoachBookingsStackParamList = {

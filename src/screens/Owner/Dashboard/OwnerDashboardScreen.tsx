@@ -23,6 +23,7 @@ import Animated, {
 import Svg, { Circle, Rect, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../../theme/colors';
 import { useThemeColors } from '../../../theme/useThemeColors';
 import { useThemeStore } from '../../../stores/theme.store';
@@ -71,7 +72,8 @@ const STATUS_COLOR: Record<ReservationStatus, string> = {
   [ReservationStatus.PAID]: '#6B7280',
   [ReservationStatus.REJECTED]: '#FF4444',
   [ReservationStatus.COACH_PENDING]: '#F97316',
-  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
+  [ReservationStatus.COACH_REJECTED]: '#EF4444',
+  [ReservationStatus.EXPIRED]: '#9CA3AF',
 };
 
 // ─── SVG Sparkline ───────────────────────────────────────────────────────────
@@ -663,12 +665,17 @@ export function OwnerDashboardScreen() {
   const tc = useThemeColors();
   const isDark = useThemeStore((s) => s.isDark);
   const user = useAuthStore((s) => s.user);
+  const navigation = useNavigation<any>();
   const {
     todayConfirmed, todayPending, todayRevenue,
     branchCount, venueCount, reservationCount,
     upcomingToday, recentReservations, revenueTrend,
     fetchDashboardData,
   } = useOwnerDashboardStore();
+  const { venues: ownVenues, fetchOwnVenues } = useOwnerVenuesStore();
+  const openNotifications = useUIStore((s) => s.openNotifications);
+  const openDrawer = useUIStore((s) => s.openDrawer);
+  const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const [refreshing, setRefreshing] = useState(false);
 
   const setScreen = useAssistantStore((s) => s.setScreen);
@@ -702,6 +709,27 @@ export function OwnerDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tc.textSecondary} />
         }
       >
+        {/* Header row */}
+        <View style={styles.dashHeader}>
+          <View style={[styles.rolePill, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
+            <Ionicons name="business-outline" size={12} color={isDark ? '#A2B8FF' : colors.navy} />
+            <Text style={[styles.rolePillText, { color: isDark ? '#A2B8FF' : colors.navy }]}>Owner</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={openNotifications} style={[styles.headerBtn, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
+              <Ionicons name="notifications-outline" size={20} color={tc.textPrimary} />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={openDrawer} style={[styles.headerBtn, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
+              <Ionicons name="menu-outline" size={22} color={tc.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Hero */}
         <Animated.View entering={FadeInUp.delay(0).springify()}>
           <HeroSection name={user?.name || 'Owner'} isDark={isDark} />
@@ -755,6 +783,24 @@ export function OwnerDashboardScreen() {
           tc={tc}
           isDark={isDark}
         />
+
+        {/* My Venues card */}
+        <Animated.View entering={FadeInDown.delay(340).springify()}>
+          <TouchableOpacity
+            style={[styles.myVenuesCard, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('MyVenuesScreen')}
+          >
+            <View style={[styles.myVenuesIcon, { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : 'rgba(11,26,62,0.07)' }]}>
+              <Ionicons name="football-outline" size={22} color={isDark ? '#A2B8FF' : colors.navy} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.myVenuesLabel, { color: tc.textPrimary }]}>My Venues</Text>
+              <Text style={[styles.myVenuesHint, { color: tc.textHint }]}>{ownVenues.length} venue{ownVenues.length !== 1 ? 's' : ''} · tap to browse & book</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={tc.textHint} />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Recent Activity */}
         {recentReservations.length > 0 && (
@@ -826,4 +872,27 @@ const styles = StyleSheet.create({
     height: 0.5,
     marginLeft: 20,
   },
+  myVenuesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  myVenuesIcon: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  myVenuesLabel: { fontSize: 15, fontWeight: '700' },
+  myVenuesHint: { fontSize: 12, marginTop: 2 },
+  dashHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  rolePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  rolePillText: { fontSize: 12, fontWeight: '700' },
+  headerActions: { flexDirection: 'row', gap: 8 },
+  headerBtn: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#FF3B30', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  badgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
 });

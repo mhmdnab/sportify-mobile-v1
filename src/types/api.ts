@@ -17,6 +17,7 @@ export enum ReservationStatus {
   PAID = 'PAID',
   COACH_PENDING = 'COACH_PENDING',
   COACH_REJECTED = 'COACH_REJECTED',
+  EXPIRED = 'EXPIRED',
 }
 
 export enum EntityType {

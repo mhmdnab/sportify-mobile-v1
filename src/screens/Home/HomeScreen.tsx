@@ -62,7 +62,7 @@ function ScheduleCard({ reservation, onPress, tc, isDark }: {
           <Text style={[schedStyles.venue, { color: tc.textPrimary }]} numberOfLines={1}>{venueName}</Text>
           {hasCoach && (
             <View style={schedStyles.coachBadge}>
-              <Ionicons name="fitness-outline" size={10} color="#fff" />
+              <FontAwesome6 name="people-group" size={9} color="#fff" />
               <Text style={schedStyles.coachBadgeText}>Coach</Text>
             </View>
           )}
@@ -212,7 +212,7 @@ export function HomeScreen() {
     <View style={[styles.rootContainer, { backgroundColor: isDark ? '#050505' : colors.navy }]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      <Animated.View style={[styles.container, { backgroundColor: isDark ? '#0A0F1E' : '#F0F2F8' }, contentAnimStyle]}>
+      <Animated.View style={[styles.container, { backgroundColor: tc.screenBg }, contentAnimStyle]}>
         <Animated.ScrollView
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler}
@@ -248,13 +248,13 @@ export function HomeScreen() {
               activeOpacity={0.88}
               onPress={() => navigation.navigate('StadiumsScreen')}
             >
-              <View style={[styles.entryIconCircle, { backgroundColor: isDark ? '#132452' : 'rgba(11,26,62,0.08)' }]}>
-                <MaterialCommunityIcons name="stadium-outline" size={26} color={colors.navy} />
+              <View style={[styles.entryIconCircle, { backgroundColor: isDark ? 'rgba(162,184,255,0.12)' : 'rgba(11,26,62,0.08)' }]}>
+                <MaterialCommunityIcons name="stadium-outline" size={26} color={isDark ? '#A2B8FF' : colors.navy} />
               </View>
               <Text style={[styles.entryCardTitle, { color: tc.textPrimary }]}>Stadiums</Text>
               <Text style={[styles.entryCardSub, { color: tc.textHint }]}>Book courts & fields</Text>
-              <View style={[styles.entryArrow, { backgroundColor: isDark ? '#132452' : '#F0F2F8' }]}>
-                <Ionicons name="arrow-forward" size={14} color={colors.navy} />
+              <View style={[styles.entryArrow, { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : '#F0F2F8' }]}>
+                <Ionicons name="arrow-forward" size={14} color={isDark ? '#A2B8FF' : colors.navy} />
               </View>
             </TouchableOpacity>
 
@@ -264,13 +264,13 @@ export function HomeScreen() {
               activeOpacity={0.88}
               onPress={() => navigation.navigate('CoachesList')}
             >
-              <View style={[styles.entryIconCircle, { backgroundColor: isDark ? '#132452' : 'rgba(11,26,62,0.1)' }]}>
-                <FontAwesome6 name="people-group" size={22} color="#0B1A3E" />
+              <View style={[styles.entryIconCircle, { backgroundColor: isDark ? 'rgba(162,184,255,0.12)' : 'rgba(11,26,62,0.1)' }]}>
+                <FontAwesome6 name="people-group" size={22} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
               </View>
               <Text style={[styles.entryCardTitle, { color: tc.textPrimary }]}>Coaches</Text>
               <Text style={[styles.entryCardSub, { color: tc.textHint }]}>Personal training</Text>
-              <View style={[styles.entryArrow, { backgroundColor: isDark ? '#132452' : '#F0F2F8' }]}>
-                <Ionicons name="arrow-forward" size={14} color="#0B1A3E" />
+              <View style={[styles.entryArrow, { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : '#F0F2F8' }]}>
+                <Ionicons name="arrow-forward" size={14} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
               </View>
             </TouchableOpacity>
           </View>
@@ -280,7 +280,7 @@ export function HomeScreen() {
             <View style={styles.sectionHeaderRow}>
               <Text style={[styles.sectionTitle, { color: tc.textPrimary }]}>My Schedule</Text>
               <TouchableOpacity onPress={() => (navigation as any).navigate('BookingsTab')}>
-                <Text style={styles.seeAll}>See all</Text>
+                <Text style={[styles.seeAll, { color: isDark ? '#7FAFD6' : '#0B1A3E' }]}>See all</Text>
               </TouchableOpacity>
             </View>
 
@@ -289,7 +289,7 @@ export function HomeScreen() {
                 <Ionicons name="calendar-outline" size={32} color={tc.textHint} />
                 <Text style={[styles.emptyScheduleText, { color: tc.textHint }]}>No upcoming bookings</Text>
                 <TouchableOpacity
-                  style={styles.bookNowPill}
+                  style={[styles.bookNowPill, { backgroundColor: isDark ? '#1A3878' : '#0B1A3E' }]}
                   onPress={() => navigation.navigate('StadiumsScreen')}
                 >
                   <Text style={styles.bookNowPillText}>Book a field</Text>
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionTitle: { fontSize: 18, fontWeight: '800' },
-  seeAll: { fontSize: 13, fontWeight: '600', color: '#0B1A3E' },
+  seeAll: { fontSize: 13, fontWeight: '600' },
 
   // Empty schedule
   emptySchedule: {
@@ -487,7 +487,6 @@ const styles = StyleSheet.create({
   },
   emptyScheduleText: { fontSize: 14 },
   bookNowPill: {
-    backgroundColor: '#0B1A3E',
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 20,

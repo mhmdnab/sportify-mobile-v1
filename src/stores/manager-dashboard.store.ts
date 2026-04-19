@@ -60,7 +60,8 @@ export const useManagerDashboardStore = create<ManagerDashboardState>((set) => (
       const { peakHours, peakVenues, counts } = analyticsRes.data.data;
       const list: Reservation[] = reservationsRes.data.list;
 
-      const today = new Date().toISOString().split('T')[0];
+      const _d = new Date();
+      const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
       const todayList = list.filter((r) => r.slotDate?.startsWith(today));
 
       const todayConfirmed = todayList.filter((r) => r.status === ReservationStatus.CONFIRMED).length;

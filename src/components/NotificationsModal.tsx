@@ -34,14 +34,14 @@ interface NotificationsModalProps {
 export function NotificationsModal({ visible, onClose }: NotificationsModalProps) {
   const insets = useSafeAreaInsets();
   const tc = useThemeColors();
-  const { notifications, isLoading, fetchNotifications, fetchMoreNotifications } = useNotificationsStore();
+  const { notifications, isLoading, fetchNotifications, fetchMoreNotifications, markAllRead } = useNotificationsStore();
 
   const translateY = useSharedValue(MODAL_HEIGHT);
   const backdropOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
-      fetchNotifications();
+      fetchNotifications().then(() => markAllRead());
       translateY.value = withSpring(0, {
         damping: 24,
         stiffness: 200,

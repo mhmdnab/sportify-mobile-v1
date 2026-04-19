@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '../../theme/useThemeColors';
 import { useThemeStore } from '../../stores/theme.store';
@@ -170,7 +170,7 @@ export function CoachVenueAvailabilityScreen({ navigation, route }: Props) {
         <View style={styles.reservationNameSection}>
           <Text style={[styles.sectionLabel, { color: tc.textPrimary }]}>Reservation Name</Text>
           <View style={[styles.nameCard, { backgroundColor: tc.cardBg }]}>
-            <Ionicons name="person-outline" size={18} color={tc.textSecondary} />
+            <FontAwesome6 name="people-group" size={16} color={tc.textSecondary} />
             <Text style={[styles.nameText, { color: tc.textPrimary }]}>{user?.name || 'Guest'}</Text>
           </View>
         </View>

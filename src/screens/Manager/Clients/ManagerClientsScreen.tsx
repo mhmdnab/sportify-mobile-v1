@@ -3,7 +3,7 @@ import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, RefreshC
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../theme/colors';
 import { useThemeColors } from '../../../theme/useThemeColors';
@@ -189,7 +189,7 @@ export function ManagerClientsScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.empty}>
-              <Ionicons name="people-outline" size={48} color={tc.textHint} />
+              <FontAwesome6 name="people-group" size={42} color={tc.textHint} />
               <Text style={[styles.emptyText, { color: tc.textSecondary }]}>
                 {search ? 'No clients match your search' : 'No clients yet'}
               </Text>

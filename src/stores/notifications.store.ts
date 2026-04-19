@@ -12,6 +12,7 @@ interface NotificationsState {
 
   fetchNotifications: (params?: { page?: number; limit?: number }) => Promise<void>;
   fetchMoreNotifications: () => Promise<void>;
+  markAllRead: () => Promise<void>;
   reset: () => void;
 }
 
@@ -64,6 +65,13 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
     } catch {
       set({ isLoading: false });
     }
+  },
+
+  markAllRead: async () => {
+    try {
+      await api.put('/notifications/own/read-all');
+      set({ unreadCount: 0 });
+    } catch { /* ignore */ }
   },
 
   reset: () => set({ notifications: [], page: 1, hasNext: false }),

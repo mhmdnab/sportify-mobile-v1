@@ -59,8 +59,8 @@ function CoachCard({ coach, onPress, tc, isDark }: {
     >
       {/* Left avatar */}
       <View style={cardStyles.avatarWrap}>
-        <View style={cardStyles.avatar}>
-          <Text style={cardStyles.avatarText}>{initial}</Text>
+        <View style={[cardStyles.avatar, { backgroundColor: isDark ? 'rgba(162,184,255,0.15)' : 'rgba(11,26,62,0.12)' }]}>
+          <Text style={[cardStyles.avatarText, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>{initial}</Text>
         </View>
         {/* Online dot style – active indicator */}
         <View style={[cardStyles.activeDot, { backgroundColor: '#22C55E' }]} />
@@ -73,8 +73,8 @@ function CoachCard({ coach, onPress, tc, isDark }: {
         </Text>
 
         {coach.sport && (
-          <View style={cardStyles.sportPill}>
-            <Text style={cardStyles.sportPillText}>{coach.sport}</Text>
+          <View style={[cardStyles.sportPill, { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : 'rgba(11,26,62,0.1)' }]}>
+            <Text style={[cardStyles.sportPillText, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>{coach.sport}</Text>
           </View>
         )}
 
@@ -97,9 +97,9 @@ function CoachCard({ coach, onPress, tc, isDark }: {
 
       {/* Right: rate */}
       <View style={cardStyles.right}>
-        <Text style={cardStyles.rate}>${coach.hourlyRate ?? 0}</Text>
+        <Text style={[cardStyles.rate, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>${coach.hourlyRate ?? 0}</Text>
         <Text style={[cardStyles.perHr, { color: tc.textHint }]}>/hr</Text>
-        <View style={cardStyles.bookBtn}>
+        <View style={[cardStyles.bookBtn, { backgroundColor: isDark ? '#162B5C' : '#0B1A3E' }]}>
           <Text style={cardStyles.bookBtnText}>Book</Text>
         </View>
       </View>
@@ -125,11 +125,10 @@ const cardStyles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: 'rgba(11,26,62,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 20, fontWeight: '800', color: '#0B1A3E' },
+  avatarText: { fontSize: 20, fontWeight: '800' },
   activeDot: { position: 'absolute', bottom: 2, right: 2, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#FFFFFF' },
   name: { fontSize: 15, fontWeight: '700' },
   sportPill: {
@@ -140,15 +139,14 @@ const cardStyles = StyleSheet.create({
     paddingVertical: 2,
     marginTop: 4,
   },
-  sportPillText: { color: '#0B1A3E', fontSize: 11, fontWeight: '700' },
+  sportPillText: { fontSize: 11, fontWeight: '700' },
   ratingCount: { fontSize: 11 },
   meta: { fontSize: 11 },
   right: { alignItems: 'center', gap: 2 },
-  rate: { fontSize: 18, fontWeight: '800', color: '#0B1A3E' },
+  rate: { fontSize: 18, fontWeight: '800' },
   perHr: { fontSize: 10 },
   bookBtn: {
     marginTop: 6,
-    backgroundColor: '#0B1A3E',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 10,
@@ -328,7 +326,7 @@ export function CoachesListScreen({ navigation }: Props) {
       {loading ? (
         <>
           {headerEl}
-          <ActivityIndicator style={{ marginTop: 60 }} color="#0B1A3E" size="large" />
+          <ActivityIndicator style={{ marginTop: 60 }} color={isDark ? '#A2B8FF' : '#0B1A3E'} size="large" />
         </>
       ) : (
         <FlatList
@@ -336,7 +334,7 @@ export function CoachesListScreen({ navigation }: Props) {
           keyExtractor={(c) => String(c.id)}
           contentContainerStyle={styles.list}
           ListHeaderComponent={headerEl}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0B1A3E" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#A2B8FF' : '#0B1A3E'} />}
           renderItem={({ item }) => (
             <CoachCard
               coach={item}
@@ -347,7 +345,7 @@ export function CoachesListScreen({ navigation }: Props) {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="fitness-outline" size={52} color={tc.textHint} />
+              <FontAwesome6 name="people-group" size={44} color={tc.textHint} />
               <Text style={[styles.emptyText, { color: tc.textHint }]}>No coaches found</Text>
             </View>
           }

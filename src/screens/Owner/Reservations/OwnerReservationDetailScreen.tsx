@@ -22,12 +22,13 @@ type RouteParams = RouteProp<OwnerReservationsStackParamList, 'OwnerReservationD
 const STATUS_META: Record<ReservationStatus, { color: string; icon: any; label: string; description: string }> = {
   [ReservationStatus.PENDING]: { color: '#F59E0B', icon: 'time-outline', label: 'Pending Approval', description: 'Waiting for venue confirmation.' },
   [ReservationStatus.CONFIRMED]: { color: '#10B981', icon: 'checkmark-circle-outline', label: 'Confirmed', description: 'Venue confirmed. Session is scheduled.' },
-  [ReservationStatus.COACH_PENDING]: { color: '#0B1A3E', icon: 'fitness-outline', label: 'Awaiting Coach', description: 'Venue confirmed. Waiting for the coach to accept.' },
-  [ReservationStatus.COACH_REJECTED]: { color: '#0B1A3E', icon: 'close-circle-outline', label: 'Coach Declined', description: 'The coach has declined this booking.' },
+  [ReservationStatus.COACH_PENDING]: { color: '#F97316', icon: 'fitness-outline', label: 'Awaiting Coach', description: 'Venue confirmed. Waiting for the coach to accept.' },
+  [ReservationStatus.COACH_REJECTED]: { color: '#EF4444', icon: 'close-circle-outline', label: 'Coach Declined', description: 'The coach has declined this booking.' },
   [ReservationStatus.CANCELLED]: { color: colors.error, icon: 'close-circle-outline', label: 'Cancelled', description: 'This booking was cancelled by the customer.' },
   [ReservationStatus.REJECTED]: { color: '#FF3B30', icon: 'ban-outline', label: 'Declined by Venue', description: 'You declined this booking request.' },
   [ReservationStatus.PLAYED]: { color: '#0EA5E9', icon: 'football-outline', label: 'Played', description: 'Session completed.' },
   [ReservationStatus.PAID]: { color: colors.textSecondary, icon: 'cash-outline', label: 'Paid', description: 'Payment recorded.' },
+  [ReservationStatus.EXPIRED]: { color: '#9CA3AF', icon: 'alert-circle-outline', label: 'Expired', description: 'Booking expired — not confirmed before the slot time.' },
 };
 
 const statusActions: { from: ReservationStatus; to: ReservationStatus; label: string; icon: any; color: string }[] = [
@@ -123,14 +124,14 @@ export function OwnerReservationDetailScreen() {
         </View>
 
         {/* Customer */}
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
           <SectionHeader icon="person-outline" title="Customer" tc={tc} />
           <Row label="Name" value={userName} tc={tc} />
           <Row label="Email" value={userEmail || '—'} tc={tc} isLast />
         </View>
 
         {/* Booking Info */}
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
           <SectionHeader icon="calendar-outline" title="Booking Info" tc={tc} />
           <Row label="Booking ID" value={`#${r.id}`} tc={tc} />
           <Row label="Venue" value={venueName} tc={tc} />
@@ -142,7 +143,7 @@ export function OwnerReservationDetailScreen() {
 
         {/* Time Slots */}
         {isMultiSlot ? (
-          <View style={[styles.card, { backgroundColor: cardBg }]}>
+          <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
             <SectionHeader icon="time-outline" title="Time Slots" tc={tc} />
             {allSlots.map((s: any, idx: number) => (
               <View key={s.id} style={[styles.slotRow, idx < allSlots.length - 1 && { borderBottomWidth: 1, borderBottomColor: tc.border }]}>
@@ -152,13 +153,13 @@ export function OwnerReservationDetailScreen() {
                     {s.startTime && s.endTime ? `${formatTime(s.startTime)} – ${formatTime(s.endTime)}` : '—'}
                   </Text>
                 </View>
-                <Text style={[styles.slotPrice, { color: colors.navy }]}>{formatPrice(s.price)}</Text>
+                <Text style={[styles.slotPrice, { color: isDark ? '#A2B8FF' : colors.navy }]}>{formatPrice(s.price)}</Text>
               </View>
             ))}
           </View>
         ) : (
           r.slot && (
-            <View style={[styles.card, { backgroundColor: cardBg }]}>
+            <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
               <SectionHeader icon="time-outline" title="Time" tc={tc} />
               <Row label="Slot" value={`${formatTime(r.slot.startTime)} – ${formatTime(r.slot.endTime)}`} tc={tc} isLast />
             </View>
@@ -167,26 +168,26 @@ export function OwnerReservationDetailScreen() {
 
         {/* Coach */}
         {(r as any).withCoach && (
-          <View style={[styles.card, { backgroundColor: cardBg }]}>
-            <SectionHeader icon="fitness-outline" title="Coach" tc={tc} color="#0B1A3E" />
+          <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
+            <SectionHeader icon="fitness-outline" title="Coach" tc={tc} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
             {(r as any).coach?.user?.name && <Row label="Coach" value={(r as any).coach.user.name} tc={tc} />}
             {coachRate && <Row label="Hourly Rate" value={`$${coachRate}/hr`} tc={tc} />}
-            {r.status === ReservationStatus.COACH_PENDING && <Row label="Coach Status" value="Awaiting confirmation" tc={tc} valueColor="#0B1A3E" />}
-            {r.status === ReservationStatus.COACH_REJECTED && <Row label="Coach Status" value="Coach declined" tc={tc} valueColor="#0B1A3E" />}
+            {r.status === ReservationStatus.COACH_PENDING && <Row label="Coach Status" value="Awaiting confirmation" tc={tc} valueColor={isDark ? '#A2B8FF' : '#0B1A3E'} />}
+            {r.status === ReservationStatus.COACH_REJECTED && <Row label="Coach Status" value="Coach declined" tc={tc} valueColor={isDark ? '#A2B8FF' : '#0B1A3E'} />}
             <Row label="Session" value={`${totalDuration}h`} tc={tc} isLast />
           </View>
         )}
 
         {/* Cost Breakdown */}
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
           <SectionHeader icon="cash-outline" title="Cost Breakdown" tc={tc} />
           <Row label="Venue fee" value={formatPrice(totalVenue)} tc={tc} />
           {(r as any).withCoach && (
-            <Row label={`Coach fee (${totalDuration}h × $${coachRate ?? 0})`} value={coachFee > 0 ? formatPrice(coachFee) : 'TBD'} tc={tc} valueColor="#0B1A3E" />
+            <Row label={`Coach fee (${totalDuration}h × $${coachRate ?? 0})`} value={coachFee > 0 ? formatPrice(coachFee) : 'TBD'} tc={tc} valueColor={isDark ? '#A2B8FF' : '#0B1A3E'} />
           )}
           <View style={[styles.totalRow, { borderTopColor: tc.border }]}>
             <Text style={[styles.totalLabel, { color: tc.textPrimary }]}>Total</Text>
-            <Text style={[styles.totalValue, { color: colors.navy }]}>{formatPrice(total)}</Text>
+            <Text style={[styles.totalValue, { color: isDark ? '#A2B8FF' : colors.navy }]}>{formatPrice(total)}</Text>
           </View>
         </View>
 
@@ -201,7 +202,7 @@ export function OwnerReservationDetailScreen() {
           {canDecline && (
             <TouchableOpacity style={styles.declineBtn} onPress={handleDecline} disabled={updating} activeOpacity={0.8}>
               <Ionicons name="close-circle-outline" size={18} color={colors.error} />
-              <Text style={styles.declineBtnText}>Decline Booking</Text>
+              <Text style={styles.declineBtnText}>{r.status === ReservationStatus.CONFIRMED ? 'Cancel Booking' : 'Decline Booking'}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -226,10 +227,11 @@ const sectionHeaderStyles = StyleSheet.create({
 });
 
 function Row({ label, value, tc, highlight, isLast, valueColor }: { label: string; value: string; tc: any; highlight?: boolean; isLast?: boolean; valueColor?: string }) {
+  const rowIsDark = useThemeStore((s) => s.isDark);
   return (
     <View style={[rowStyles.row, !isLast && { borderBottomWidth: 1, borderBottomColor: tc.border }]}>
       <Text style={[rowStyles.label, { color: tc.textSecondary }]}>{label}</Text>
-      <Text style={[rowStyles.value, { color: valueColor ?? (highlight ? colors.navy : tc.textPrimary) }, (highlight || valueColor) && { fontWeight: '700' }]}>{value}</Text>
+      <Text style={[rowStyles.value, { color: valueColor ?? (highlight ? (rowIsDark ? '#A2B8FF' : colors.navy) : tc.textPrimary) }, (highlight || valueColor) && { fontWeight: '700' }]}>{value}</Text>
     </View>
   );
 }

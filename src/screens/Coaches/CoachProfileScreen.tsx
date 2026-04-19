@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useThemeColors } from '../../theme/useThemeColors';
 import { useThemeStore } from '../../stores/theme.store';
 import { spacing, radius } from '../../theme/spacing';
@@ -163,7 +163,7 @@ export function CoachProfileScreen({ navigation, route }: Props) {
         {/* Hero card */}
         <View style={[styles.heroCard, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
           <View style={styles.heroAvatar}>
-            <Ionicons name="person" size={40} color="#0B1A3E" />
+            <FontAwesome6 name="people-group" size={34} color="#0B1A3E" />
           </View>
           <Text style={[styles.heroName, { color: tc.textPrimary }]}>{coach.user?.name ?? `Coach #${coach.id}`}</Text>
           {coach.sport ? (

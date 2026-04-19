@@ -3,7 +3,7 @@ import { View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet, Refresh
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../theme/colors';
 import { useThemeColors } from '../../../theme/useThemeColors';
@@ -21,25 +21,26 @@ type Nav = NativeStackNavigationProp<OwnerReservationsStackParamList, 'OwnerRese
 
 type FilterTab = 'all' | ReservationStatus;
 
-const filterTabs: { key: FilterTab; labelKey: string }[] = [
-  { key: ReservationStatus.PENDING, labelKey: 'owner.pending' },
-  { key: ReservationStatus.CONFIRMED, labelKey: 'owner.confirmed' },
-  { key: ReservationStatus.CANCELLED, labelKey: 'owner.cancelled' },
-  { key: ReservationStatus.PAID, labelKey: 'owner.paid' },
-  { key: 'all', labelKey: 'owner.all' },
+const filterTabs: { key: FilterTab; label: string }[] = [
+  { key: ReservationStatus.PENDING, label: 'Pending' },
+  { key: ReservationStatus.CONFIRMED, label: 'Confirmed' },
+  { key: ReservationStatus.REJECTED, label: 'Rejected' },
+  { key: ReservationStatus.PAID, label: 'Paid' },
+  { key: 'all', label: 'All' },
 ];
 
-const TODAY_ONLY_FILTERS: FilterTab[] = [ReservationStatus.CANCELLED, ReservationStatus.PAID];
+const TODAY_ONLY_FILTERS: FilterTab[] = [ReservationStatus.PAID];
 
 const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: '#FF9500',
-  [ReservationStatus.CONFIRMED]: colors.navy,
+  [ReservationStatus.CONFIRMED]: '#3B82F6',
   [ReservationStatus.CANCELLED]: colors.error,
   [ReservationStatus.PLAYED]: '#007AFF',
   [ReservationStatus.PAID]: '#6B7280',
   [ReservationStatus.REJECTED]: colors.error,
   [ReservationStatus.COACH_PENDING]: '#F97316',
-  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
+  [ReservationStatus.COACH_REJECTED]: '#EF4444',
+  [ReservationStatus.EXPIRED]: '#9CA3AF',
 };
 
 function OwnerReservationCard({
@@ -81,7 +82,7 @@ function OwnerReservationCard({
         <View style={cardStyles.topRow}>
           <View style={cardStyles.userInfo}>
             <View style={[cardStyles.avatar, { backgroundColor: `${statusColor}20` }]}>
-              <Ionicons name="person" size={14} color={statusColor} />
+              <FontAwesome6 name="people-group" size={12} color={statusColor} />
             </View>
             <Text style={[cardStyles.userName, { color: tc.textPrimary }]} numberOfLines={1}>
               {userName}
@@ -114,7 +115,7 @@ function OwnerReservationCard({
           {total > 0 ? (
             <View style={cardStyles.detailRow}>
               <Ionicons name="cash-outline" size={13} color={tc.textHint} />
-              <Text style={[cardStyles.priceText, { color: colors.navy }]}>
+              <Text style={[cardStyles.priceText, { color: '#3B82F6' }]}>
                 {formatPrice(total)}{(reservation as any).withCoach ? ' (with coach)' : ''}
               </Text>
             </View>
@@ -173,7 +174,7 @@ function OwnerGroupCard({ entry, onPress, tc }: { entry: GroupEntry; onPress: ()
         <View style={cardStyles.topRow}>
           <View style={cardStyles.userInfo}>
             <View style={[cardStyles.avatar, { backgroundColor: `${statusColor}20` }]}>
-              <Ionicons name="person" size={14} color={statusColor} />
+              <FontAwesome6 name="people-group" size={12} color={statusColor} />
             </View>
             <Text style={[cardStyles.userName, { color: tc.textPrimary }]} numberOfLines={1}>{userName}</Text>
           </View>
@@ -200,7 +201,7 @@ function OwnerGroupCard({ entry, onPress, tc }: { entry: GroupEntry; onPress: ()
           {total > 0 && (
             <View style={cardStyles.detailRow}>
               <Ionicons name="cash-outline" size={13} color={tc.textHint} />
-              <Text style={[cardStyles.priceText, { color: colors.navy }]}>{formatPrice(total)}{withCoach ? ' (with coach)' : ''}</Text>
+              <Text style={[cardStyles.priceText, { color: '#3B82F6' }]}>{formatPrice(total)}{withCoach ? ' (with coach)' : ''}</Text>
             </View>
           )}
         </View>
@@ -313,7 +314,7 @@ export function OwnerReservationsScreen() {
                   },
                 ]}
               >
-                {t(item.labelKey)}
+                {item.label}
               </Text>
             </TouchableOpacity>
           );

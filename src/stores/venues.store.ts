@@ -23,7 +23,7 @@ interface VenuesState {
   fetchVenues: (params?: PaginationParams) => Promise<void>;
   searchVenues: (params?: VenueSearchParams) => Promise<void>;
   searchMore: () => Promise<void>;
-  fetchVenueById: (id: number) => Promise<void>;
+  fetchVenueById: (id: number, date?: string) => Promise<void>;
   clearSearch: () => void;
 }
 
@@ -95,10 +95,10 @@ export const useVenuesStore = create<VenuesState>((set, get) => ({
     }
   },
 
-  fetchVenueById: async (id: number) => {
+  fetchVenueById: async (id: number, date?: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get<Venue>(`/venues/${id}`);
+      const response = await api.get<Venue>(`/venues/${id}`, { params: date ? { date } : undefined });
       set({ currentVenue: response.data, isLoading: false });
     } catch (error: any) {
       set({

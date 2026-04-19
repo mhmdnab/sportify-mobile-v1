@@ -8,6 +8,7 @@ import {
   RefreshControl,
   StatusBar,
   Platform,
+  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,7 +71,7 @@ function BranchListCard({ branch, onPress, tc, isDark }: {
 
         {branch.address && (
           <View style={cardStyles.locationRow}>
-            <Ionicons name="location" size={13} color={colors.navy} />
+            <Ionicons name="location" size={13} color={isDark ? '#A2B8FF' : colors.navy} />
             <Text style={[cardStyles.location, { color: tc.textSecondary }]} numberOfLines={1}>
               {branch.address.city}{branch.address.street ? `, ${branch.address.street}` : ''}
             </Text>
@@ -79,16 +80,16 @@ function BranchListCard({ branch, onPress, tc, isDark }: {
 
         <View style={cardStyles.bottomRow}>
           {branch.venues && branch.venues.length > 0 && (
-            <View style={cardStyles.venueCountPill}>
-              <Ionicons name="grid-outline" size={11} color="#0B1A3E" />
-              <Text style={cardStyles.venueCountText}>
+            <View style={[cardStyles.venueCountPill, { backgroundColor: isDark ? 'rgba(162,184,255,0.12)' : 'rgba(11,26,62,0.1)' }]}>
+              <Ionicons name="grid-outline" size={11} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
+              <Text style={[cardStyles.venueCountText, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>
                 {branch.venues.length} {branch.venues.length === 1 ? 'court' : 'courts'}
               </Text>
             </View>
           )}
-          <View style={[cardStyles.bookBtn]}>
-            <Text style={cardStyles.bookBtnText}>View & Book</Text>
-            <Ionicons name="arrow-forward" size={12} color={colors.navy} />
+          <View style={[cardStyles.bookBtn, { backgroundColor: isDark ? 'rgba(162,184,255,0.12)' : 'rgba(11,26,62,0.07)' }]}>
+            <Text style={[cardStyles.bookBtnText, { color: isDark ? '#A2B8FF' : colors.navy }]}>View & Book</Text>
+            <Ionicons name="arrow-forward" size={12} color={isDark ? '#A2B8FF' : colors.navy} />
           </View>
         </View>
       </View>
@@ -150,22 +151,20 @@ const cardStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(11,26,62,0.1)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
   },
-  venueCountText: { color: '#0B1A3E', fontSize: 12, fontWeight: '600' },
+  venueCountText: { fontSize: 12, fontWeight: '600' },
   bookBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(6,15,40,0.07)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
   },
-  bookBtnText: { color: colors.navy, fontSize: 12, fontWeight: '700' },
+  bookBtnText: { fontSize: 12, fontWeight: '700' },
 });
 
 export function StadiumsScreen({ navigation }: Props) {
@@ -175,6 +174,7 @@ export function StadiumsScreen({ navigation }: Props) {
   const { sports, fetchSports } = useSportsStore();
   const { branches, fetchBranches, isLoading } = useBranchesStore();
   const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -192,9 +192,15 @@ export function StadiumsScreen({ navigation }: Props) {
     setSelectedSportId((prev) => (prev === sportId ? null : sportId));
   };
 
-  const filteredBranches = selectedSportId
-    ? branches.filter((b) => b.sportId === selectedSportId)
-    : branches;
+  const filteredBranches = branches
+    .filter((b) => !selectedSportId || b.sportId === selectedSportId)
+    .filter((b) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      const matchBranch = b.name.toLowerCase().includes(q) || b.address?.city?.toLowerCase().includes(q);
+      const matchVenue = b.venues?.some((v) => v.name.toLowerCase().includes(q));
+      return matchBranch || matchVenue;
+    });
 
   const headerEl = (
     <>
@@ -205,6 +211,25 @@ export function StadiumsScreen({ navigation }: Props) {
         </TouchableOpacity>
         <Text style={[headerStyles.title, { color: tc.textPrimary }]}>Stadiums</Text>
         <View style={{ width: 36 }} />
+      </View>
+
+      {/* Search bar */}
+      <View style={[headerStyles.searchRow, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
+        <Ionicons name="search-outline" size={18} color={tc.textHint} />
+        <TextInput
+          style={[headerStyles.searchInput, { color: tc.textPrimary }]}
+          placeholder="Search stadiums or venues…"
+          placeholderTextColor={tc.textHint}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={18} color={tc.textHint} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Sport chips */}
@@ -289,6 +314,21 @@ const headerStyles = StyleSheet.create({
   chips: { paddingHorizontal: spacing.screenPadding, paddingVertical: 10, gap: 8 },
   countRow: { paddingHorizontal: spacing.screenPadding, paddingBottom: 8 },
   count: { fontSize: 13, fontWeight: '500' },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: 10,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
+      android: { elevation: 2 },
+    }),
+  },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
 });
 
 const styles = StyleSheet.create({

@@ -8,10 +8,22 @@ import { OwnerVenuesStack } from './OwnerVenuesStack';
 import { OwnerReservationsStack } from './OwnerReservationsStack';
 import { ProfileStack } from './ProfileStack';
 import { ownerTabs } from '../constants/ownerTabs';
+import { NotificationsModal } from '../components/NotificationsModal';
+import { ProfileDrawer } from '../components/ProfileDrawer';
+import { useUIStore } from '../stores/ui.store';
 
 const Tab = createBottomTabNavigator();
 
 export function OwnerAppNavigator() {
+  const notifVisible = useUIStore((s) => s.isNotificationsOpen);
+  const closeNotifications = useUIStore((s) => s.closeNotifications);
+  const isDrawerOpen = useUIStore((s) => s.isDrawerOpen);
+  const closeDrawer = useUIStore((s) => s.closeDrawer);
+
+  const handleDrawerNavigate = (screen: string) => {
+    closeDrawer();
+  };
+
   return (
     <View style={StyleSheet.absoluteFill}>
       <Tab.Navigator
@@ -27,6 +39,9 @@ export function OwnerAppNavigator() {
         <Tab.Screen name="ReservationsTab" component={OwnerReservationsStack} />
         <Tab.Screen name="ProfileTab" component={ProfileStack} />
       </Tab.Navigator>
+
+      <NotificationsModal visible={notifVisible} onClose={closeNotifications} />
+      <ProfileDrawer visible={isDrawerOpen} onClose={closeDrawer} onNavigate={handleDrawerNavigate} />
     </View>
   );
 }

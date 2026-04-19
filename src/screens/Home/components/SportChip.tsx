@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, View, StyleSheet, Platform } from 'react-native';
 import { colors } from '../../../theme/colors';
 import { useThemeColors } from '../../../theme/useThemeColors';
+import { useThemeStore } from '../../../stores/theme.store';
 import { spacing } from '../../../theme/spacing';
 import { Sport } from '../../../types/api';
 import { SportIcon } from '../../../components/ui/SportIcon';
@@ -14,16 +15,22 @@ interface SportChipProps {
 
 export function SportChip({ sport, isSelected, onPress }: SportChipProps) {
   const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
+  const selectedBg = isDark ? '#1D4ED8' : colors.navy;
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      style={[styles.chip, { backgroundColor: tc.cardBg, borderColor: tc.border }, isSelected && styles.selectedChip]}
+      style={[
+        styles.chip,
+        { backgroundColor: tc.cardBg, borderColor: tc.border },
+        isSelected && { backgroundColor: selectedBg, borderColor: selectedBg },
+      ]}
     >
       <View style={styles.iconCircle}>
         <SportIcon sportName={sport.name} size={18} color={isSelected ? colors.white : tc.textPrimary} />
       </View>
-      <Text style={[styles.label, { color: tc.textPrimary }, isSelected && styles.selectedLabel]}>
+      <Text style={[styles.label, { color: isSelected ? colors.white : tc.textPrimary }]}>
         {sport.name}
       </Text>
     </TouchableOpacity>
@@ -54,18 +61,9 @@ const styles = StyleSheet.create({
     }),
   },
   selectedChip: {
-    borderColor: colors.navy,
-    backgroundColor: colors.navy,
     ...Platform.select({
-      ios: {
-        shadowColor: colors.navy,
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-      },
-      android: {
-        elevation: 6,
-      },
+      ios: { shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 6 },
     }),
   },
   iconCircle: {
@@ -85,9 +83,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.navy,
-  },
-  selectedLabel: {
-    color: colors.white,
   },
 });

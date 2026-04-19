@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CustomTabBar } from './CustomTabBar';
 import { HomeStack } from './HomeStack';
 import { ExploreStack } from './ExploreStack';
-import { LastMomentsStack } from './LastMomentsStack';
+import { ShopStack } from './ShopStack';
 import { BookingsStack } from './BookingsStack';
 import { ProfileStack } from './ProfileStack';
 import { NotificationsModal } from '../components/NotificationsModal';
@@ -27,7 +27,7 @@ export function AppNavigator() {
       >
         <Tab.Screen name="HomeTab" component={HomeStack} />
         <Tab.Screen name="ExploreTab" component={ExploreStack} />
-        <Tab.Screen name="LastMomentsTab" component={LastMomentsStack} />
+        <Tab.Screen name="ShopTab" component={ShopStack} />
         <Tab.Screen name="BookingsTab" component={BookingsStack} />
         <Tab.Screen name="ProfileTab" component={ProfileStack} />
       </Tab.Navigator>

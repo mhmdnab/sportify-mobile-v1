@@ -12,7 +12,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '../../theme/useThemeColors';
 import { useThemeStore } from '../../stores/theme.store';
@@ -23,6 +24,7 @@ import { SportChip } from '../Home/components/SportChip';
 import { useSportsStore } from '../../stores/sports.store';
 import { Coach, Sport } from '../../types/api';
 import { api } from '../../lib/api';
+import { useAssistantStore } from '../../stores/assistant.store';
 import { HomeStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'CoachesList'>;
@@ -207,10 +209,19 @@ export function CoachesListScreen({ navigation }: Props) {
   const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  const setScreen = useAssistantStore((s) => s.setScreen);
+
   useEffect(() => {
     fetchSports();
     fetchCoaches('', null);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreen('coaches');
+      return () => setScreen('general');
+    }, []),
+  );
 
   const fetchCoaches = useCallback(async (q: string, sportId: number | null) => {
     try {

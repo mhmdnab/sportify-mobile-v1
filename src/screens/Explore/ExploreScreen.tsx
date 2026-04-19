@@ -23,6 +23,7 @@ import { spacing } from '../../theme/spacing';
 import { useVenuesStore } from '../../stores/venues.store';
 import { useSportsStore } from '../../stores/sports.store';
 import { useBranchesStore } from '../../stores/branches.store';
+import { useAssistantStore } from '../../stores/assistant.store';
 import { api } from '../../lib/api';
 import { Venue, VenueType, Branch, PaginatedResponse } from '../../types/api';
 import { ExploreStackParamList } from '../../types/navigation';
@@ -68,6 +69,15 @@ export function ExploreScreen() {
     fetchBranches({ limit: 50 });
     loadVenueTypes();
   }, []);
+
+  const setScreen = useAssistantStore((s) => s.setScreen);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setScreen('explore', { query: searchQuery, sportId: selectedSportId });
+      return () => setScreen('general');
+    }, [searchQuery, selectedSportId]),
+  );
 
   // Reset screen state when tab is focused (but keep search history)
   useFocusEffect(

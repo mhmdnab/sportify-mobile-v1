@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -21,6 +21,7 @@ import { useThemeColors } from '../../theme/useThemeColors';
 import { spacing } from '../../theme/spacing';
 import { useAuthStore } from '../../stores/auth.store';
 import { useThemeStore } from '../../stores/theme.store';
+import { useAssistantStore } from '../../stores/assistant.store';
 import { ProfileStackParamList } from '../../types/navigation';
 import { useTranslation } from 'react-i18next';
 
@@ -44,8 +45,16 @@ export function ProfileScreen() {
   const toggleDarkMode = useThemeStore((s) => s.toggleDarkMode);
   const tc = useThemeColors();
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const setScreen = useAssistantStore((s) => s.setScreen);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreen('profile');
+      return () => setScreen('general');
+    }, []),
+  );
 
   const screenBg = isDark ? '#0A0F1E' : '#F0F2F8';
   const cardBg = isDark ? '#0C1832' : '#FFFFFF';

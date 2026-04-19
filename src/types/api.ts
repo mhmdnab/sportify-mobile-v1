@@ -153,6 +153,7 @@ export interface Venue {
   id: number;
   branchId: number;
   name: string;
+  description?: string;
   images: string[];
   playerCapacity: number;
   isTop: boolean;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
   Switch,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { useThemeColors } from '../../theme/useThemeColors';
@@ -22,6 +23,7 @@ import { spacing } from '../../theme/spacing';
 import { useVenuesStore } from '../../stores/venues.store';
 import { useAuthStore } from '../../stores/auth.store';
 import { useReservationsStore } from '../../stores/reservations.store';
+import { useAssistantStore } from '../../stores/assistant.store';
 import { Coach, Slot } from '../../types/api';
 import { api } from '../../lib/api';
 import { getDayOfWeek, getNext14Days, formatTime, formatSlotDate } from '../../utils/date';
@@ -60,9 +62,18 @@ export function ReservationScreen({ route, navigation }: Props) {
   const [withCoach, setWithCoach] = useState(false);
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
 
+  const setScreen = useAssistantStore((s) => s.setScreen);
+
   useEffect(() => {
     fetchVenueById(venueId, formatSlotDate(selectedDate));
   }, [venueId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreen('booking', { venueName: currentVenue?.name });
+      return () => setScreen('general');
+    }, [currentVenue?.name]),
+  );
 
   useEffect(() => {
     const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];

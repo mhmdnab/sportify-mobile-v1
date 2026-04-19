@@ -10,7 +10,7 @@ export interface TabConfig {
 export const tabs: TabConfig[] = [
   { name: 'HomeTab', labelKey: 'tabs.home', icon: 'home-outline', activeIcon: 'home' },
   { name: 'ExploreTab', labelKey: 'tabs.search', icon: 'search-outline', activeIcon: 'search' },
-  { name: 'LastMomentsTab', labelKey: 'tabs.lastMoments', icon: 'timer-outline', activeIcon: 'timer' },
+  { name: 'ShopTab', labelKey: 'tabs.shop', icon: 'bag-outline', activeIcon: 'bag-handle' },
   { name: 'BookingsTab', labelKey: 'tabs.schedule', icon: 'calendar-outline', activeIcon: 'calendar' },
   { name: 'ProfileTab', labelKey: 'tabs.profile', icon: 'person-outline', activeIcon: 'person' },
 ];

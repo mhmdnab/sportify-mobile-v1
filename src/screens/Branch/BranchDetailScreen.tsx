@@ -95,7 +95,7 @@ export function BranchDetailScreen({ route, navigation }: Props) {
             contentFit="cover"
           />
         ) : (
-          <View style={[StyleSheet.absoluteFill, styles.imagePlaceholder]}>
+          <View style={[StyleSheet.absoluteFill, styles.imagePlaceholder, { backgroundColor: tc.surface }]}>
             <Ionicons name="football-outline" size={48} color={tc.textHint} />
           </View>
         )}
@@ -123,7 +123,7 @@ export function BranchDetailScreen({ route, navigation }: Props) {
               {branch.name}
             </Text>
             {venueCount > 0 && (
-              <Text style={styles.venueCount}>
+              <Text style={[styles.venueCount, { color: isDark ? '#A2B8FF' : colors.navy }]}>
                 {venueCount} {venueCount === 1 ? t('branch.stadium') : t('branch.stadiums')}
               </Text>
             )}
@@ -150,15 +150,15 @@ export function BranchDetailScreen({ route, navigation }: Props) {
 
           {/* Location button */}
           <TouchableOpacity
-            style={styles.locationBtn}
+            style={[styles.locationBtn, { borderColor: isDark ? '#A2B8FF' : colors.navy }]}
             onPress={handleLocationPress}
           >
             <Ionicons
               name="location-outline"
               size={18}
-              color={isDark ? colors.navyLight : colors.navy}
+              color={isDark ? '#A2B8FF' : colors.navy}
             />
-            <Text style={styles.locationBtnText}>{t('branch.location')}</Text>
+            <Text style={[styles.locationBtnText, { color: isDark ? '#A2B8FF' : colors.navy }]}>{t('branch.location')}</Text>
           </TouchableOpacity>
 
           {/* Tabs */}
@@ -267,6 +267,7 @@ function VenueListItem({
 }) {
   const { t } = useTranslation();
   const tc = useThemeColors();
+  const isDark = useThemeStore((s) => s.isDark);
   const lowestPrice = venue.availability
     ?.flatMap((a) => a.slots || [])
     .reduce((min, slot) => (slot.price < min ? slot.price : min), Infinity);
@@ -278,7 +279,7 @@ function VenueListItem({
 
   return (
     <TouchableOpacity
-      style={[styles.venueCard, { backgroundColor: tc.cardBg }]}
+      style={[styles.venueCard, { backgroundColor: tc.cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -374,7 +375,7 @@ function FacilityGridItem({ facility }: { facility: Facility }) {
   const imageUri = facility.images?.[0] || facility.type?.image;
 
   return (
-    <View style={[styles.facilityCard, { backgroundColor: tc.cardBg }]}>
+    <View style={[styles.facilityCard, { backgroundColor: tc.cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
       {hasImage ? (
         <Image
           source={{ uri: imageUri }}
@@ -442,7 +443,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   imagePlaceholder: {
-    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -467,7 +467,6 @@ const styles = StyleSheet.create({
   venueCount: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.navy,
     marginLeft: 12,
   },
   locationRow: {
@@ -487,13 +486,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: colors.navy,
     marginBottom: 24,
   },
   locationBtnText: {
     fontSize: 15,
     fontWeight: "600",
-    color: colors.navy,
   },
   tabs: {
     flexDirection: "row",

@@ -9,6 +9,7 @@ import {
   Switch,
   RefreshControl,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -68,9 +69,22 @@ export function ProfileScreen() {
     finally { setUploadingAvatar(false); }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    (navigation as any).reset({ index: 0, routes: [{ name: 'Auth' }] });
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            (navigation as any).reset({ index: 0, routes: [{ name: 'Auth' }] });
+          },
+        },
+      ],
+    );
   };
 
   const initials = user?.name
@@ -123,18 +137,20 @@ export function ProfileScreen() {
           <ShortcutBtn
             icon="calendar-outline"
             label="Reservations"
-            iconBg="#EEF0FF"
-            iconColor="#0B1A3E"
-            onPress={() => (navigation as any).navigate('BookingsTab')}
+            iconBg={isDark ? 'rgba(162,184,255,0.15)' : '#EEF0FF'}
+            iconColor={isDark ? '#A2B8FF' : '#0B1A3E'}
+            onPress={() => navigation.navigate('MyReservations')}
             cardBg={cardBg}
+            isDark={isDark}
           />
           <ShortcutBtn
             icon="pencil-outline"
             label="Edit Profile"
-            iconBg="#E8F5E9"
-            iconColor="#22C55E"
+            iconBg={isDark ? 'rgba(74,222,128,0.12)' : '#E8F5E9'}
+            iconColor={isDark ? '#4ADE80' : '#22C55E'}
             onPress={() => navigation.navigate('EditProfile')}
             cardBg={cardBg}
+            isDark={isDark}
           />
         </View>
 
@@ -142,18 +158,19 @@ export function ProfileScreen() {
           {/* ── General Info ── */}
           <SectionCard
             icon="person-outline"
-            iconBg="#EEF0FF"
-            iconColor="#0B1A3E"
+            iconBg={isDark ? 'rgba(162,184,255,0.15)' : '#EEF0FF'}
+            iconColor={isDark ? '#A2B8FF' : '#0B1A3E'}
             title={t('profile.generalInfo')}
             cardBg={cardBg}
             tc={tc}
+            isDark={isDark}
             action={
               <TouchableOpacity
-                style={[styles.editPill, { backgroundColor: isDark ? 'rgba(11,26,62,0.15)' : '#EEF0FF' }]}
+                style={[styles.editPill, { backgroundColor: isDark ? 'rgba(162,184,255,0.12)' : '#EEF0FF' }]}
                 onPress={() => navigation.navigate('EditProfile')}
               >
-                <Ionicons name="pencil-outline" size={13} color="#0B1A3E" />
-                <Text style={styles.editPillText}>Edit</Text>
+                <Ionicons name="pencil-outline" size={13} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
+                <Text style={[styles.editPillText, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>Edit</Text>
               </TouchableOpacity>
             }
           >
@@ -171,11 +188,12 @@ export function ProfileScreen() {
           {/* ── Appearance ── */}
           <SectionCard
             icon={isDark ? 'moon' : 'sunny-outline'}
-            iconBg="#FFF8E1"
+            iconBg={isDark ? 'rgba(245,158,11,0.12)' : '#FFF8E1'}
             iconColor="#F59E0B"
             title={t('profile.appearance')}
             cardBg={cardBg}
             tc={tc}
+            isDark={isDark}
           >
             <View style={styles.toggleRow}>
               <View style={styles.toggleLeft}>
@@ -197,34 +215,35 @@ export function ProfileScreen() {
           {/* ── Language ── */}
           <SectionCard
             icon="language-outline"
-            iconBg="#E0F7FA"
-            iconColor="#0891B2"
+            iconBg={isDark ? 'rgba(8,145,178,0.12)' : '#E0F7FA'}
+            iconColor={isDark ? '#22D3EE' : '#0891B2'}
             title={t('profile.language')}
             cardBg={cardBg}
             tc={tc}
+            isDark={isDark}
           >
             <View style={styles.langRow}>
               <TouchableOpacity
                 style={[
                   styles.langBtn,
-                  { borderColor: locale === 'en' ? colors.navy : tc.border },
-                  locale === 'en' && styles.langBtnActive,
+                  { borderColor: locale === 'en' ? (isDark ? '#A2B8FF' : colors.navy) : tc.border },
+                  locale === 'en' && { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : `${colors.navy}10` },
                 ]}
                 onPress={() => setLocale('en')}
               >
-                <Text style={[styles.langBtnText, { color: locale === 'en' ? colors.navy : tc.textSecondary }]}>
+                <Text style={[styles.langBtnText, { color: locale === 'en' ? (isDark ? '#A2B8FF' : colors.navy) : tc.textSecondary }]}>
                   English
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.langBtn,
-                  { borderColor: locale === 'ar' ? colors.navy : tc.border },
-                  locale === 'ar' && styles.langBtnActive,
+                  { borderColor: locale === 'ar' ? (isDark ? '#A2B8FF' : colors.navy) : tc.border },
+                  locale === 'ar' && { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : `${colors.navy}10` },
                 ]}
                 onPress={() => setLocale('ar')}
               >
-                <Text style={[styles.langBtnText, { color: locale === 'ar' ? colors.navy : tc.textSecondary }]}>
+                <Text style={[styles.langBtnText, { color: locale === 'ar' ? (isDark ? '#A2B8FF' : colors.navy) : tc.textSecondary }]}>
                   العربية
                 </Text>
               </TouchableOpacity>
@@ -234,16 +253,17 @@ export function ProfileScreen() {
           {/* ── Security ── */}
           <SectionCard
             icon="lock-closed-outline"
-            iconBg="#FCE4EC"
-            iconColor="#E91E63"
+            iconBg={isDark ? 'rgba(233,30,99,0.12)' : '#FCE4EC'}
+            iconColor={isDark ? '#F472B6' : '#E91E63'}
             title={t('profile.securityInfo')}
             cardBg={cardBg}
             tc={tc}
+            isDark={isDark}
           >
             <TouchableOpacity style={styles.menuRow}>
               <View style={styles.menuRowLeft}>
-                <View style={[styles.menuRowIconBox, { backgroundColor: '#FCE4EC' }]}>
-                  <Ionicons name="key-outline" size={15} color="#E91E63" />
+                <View style={[styles.menuRowIconBox, { backgroundColor: isDark ? 'rgba(233,30,99,0.12)' : '#FCE4EC' }]}>
+                  <Ionicons name="key-outline" size={15} color={isDark ? '#F472B6' : '#E91E63'} />
                 </View>
                 <Text style={[styles.menuRowLabel, { color: tc.textPrimary }]}>{t('profile.changePassword')}</Text>
               </View>
@@ -253,7 +273,7 @@ export function ProfileScreen() {
 
           {/* ── Logout ── */}
           <TouchableOpacity
-            style={[styles.logoutCard, { backgroundColor: cardBg }]}
+            style={[styles.logoutCard, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,68,68,0.12)' }]}
             onPress={handleLogout}
             activeOpacity={0.8}
           >
@@ -274,7 +294,7 @@ export function ProfileScreen() {
 // ── Sub-components ──
 
 function ShortcutBtn({
-  icon, label, iconBg, iconColor, onPress, cardBg,
+  icon, label, iconBg, iconColor, onPress, cardBg, isDark,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -282,9 +302,18 @@ function ShortcutBtn({
   iconColor: string;
   onPress: () => void;
   cardBg: string;
+  isDark?: boolean;
 }) {
   return (
-    <TouchableOpacity style={[styles.shortcutCard, { backgroundColor: cardBg }]} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={[
+        styles.shortcutCard,
+        { backgroundColor: cardBg },
+        isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       <View style={[styles.shortcutIconBox, { backgroundColor: iconBg }]}>
         <Ionicons name={icon} size={20} color={iconColor} />
       </View>
@@ -294,7 +323,7 @@ function ShortcutBtn({
 }
 
 function SectionCard({
-  icon, iconBg, iconColor, title, children, cardBg, tc, action,
+  icon, iconBg, iconColor, title, children, cardBg, tc, action, isDark,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   iconBg: string;
@@ -304,9 +333,10 @@ function SectionCard({
   cardBg: string;
   tc: any;
   action?: React.ReactNode;
+  isDark?: boolean;
 }) {
   return (
-    <View style={[styles.sectionCard, { backgroundColor: cardBg }]}>
+    <View style={[styles.sectionCard, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }]}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleRow}>
           <View style={[styles.sectionIconBox, { backgroundColor: iconBg }]}>
@@ -485,7 +515,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
   },
-  editPillText: { fontSize: 12, fontWeight: '700', color: '#0B1A3E' },
+  editPillText: { fontSize: 12, fontWeight: '700' },
 
   // Info row
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 8 },
@@ -513,7 +543,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
   },
-  langBtnActive: { backgroundColor: `${colors.navy}10` },
+  langBtnActive: {},
   langBtnText: { fontSize: 14, fontWeight: '600' },
 
   // Menu row

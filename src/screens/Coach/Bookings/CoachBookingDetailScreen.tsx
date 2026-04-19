@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,7 @@ const STATUS_COLOR: Record<string, string> = {
   [ReservationStatus.PAID]: '#6B7280',
   [ReservationStatus.REJECTED]: '#FF4444',
   [ReservationStatus.COACH_PENDING]: '#FF9500',
-  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
+  [ReservationStatus.COACH_REJECTED]: '#EF4444',
 };
 
 function statusLabel(s: ReservationStatus): string {
@@ -36,10 +36,11 @@ function statusLabel(s: ReservationStatus): string {
 }
 
 function InfoRow({ icon, label, value, tc }: { icon: string; label: string; value: string; tc: any }) {
+  const isDarkRow = useThemeStore((s) => s.isDark);
   return (
     <View style={rowStyles.row}>
-      <View style={rowStyles.iconBox}>
-        <Ionicons name={icon as any} size={16} color="#0B1A3E" />
+      <View style={[rowStyles.iconBox, { backgroundColor: isDarkRow ? 'rgba(162,184,255,0.12)' : 'rgba(11,26,62,0.1)' }]}>
+        <Ionicons name={icon as any} size={16} color={isDarkRow ? '#A2B8FF' : '#0B1A3E'} />
       </View>
       <View style={rowStyles.texts}>
         <Text style={[rowStyles.label, { color: tc.textHint }]}>{label}</Text>
@@ -50,7 +51,7 @@ function InfoRow({ icon, label, value, tc }: { icon: string; label: string; valu
 }
 const rowStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  iconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(11,26,62,0.1)', alignItems: 'center', justifyContent: 'center' },
+  iconBox: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   texts: { flex: 1 },
   label: { fontSize: 11, fontWeight: '500' },
   value: { fontSize: 15, fontWeight: '600', marginTop: 1 },
@@ -63,7 +64,7 @@ export function CoachBookingDetailScreen() {
   const route = useRoute<Route>();
   const { reservationId } = route.params;
 
-  const { currentReservation, isLoadingDetail, fetchReservationById, acceptReservation, rejectReservation } =
+  const { currentReservation, isLoadingDetail, fetchReservationById, acceptReservation, rejectReservation, markAsPaid } =
     useCoachReservationsStore();
 
   useEffect(() => {
@@ -97,10 +98,23 @@ export function CoachBookingDetailScreen() {
     ]);
   };
 
+  const handleMarkAsPaid = () => {
+    Alert.alert('Mark as Paid', 'Confirm that this booking has been paid?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Mark as Paid',
+        onPress: async () => {
+          await markAsPaid(reservationId);
+          navigation.goBack();
+        },
+      },
+    ]);
+  };
+
   if (isLoadingDetail || !currentReservation) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#060F28' : '#F4F6FB', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color="#0B1A3E" />
+        <ActivityIndicator color={isDark ? '#A2B8FF' : '#0B1A3E'} />
       </SafeAreaView>
     );
   }
@@ -118,8 +132,10 @@ export function CoachBookingDetailScreen() {
   const coachFee = coachRate * slotDurationHours;
   const total = slotPrice + coachFee;
   const venueName = r.slot?.availability?.venue?.name ?? '—';
+  const branchPhone = (r as any).slot?.availability?.venue?.branch?.phone as string | undefined;
   const userName = r.user?.name ?? '—';
   const coachName = (r as any).coach?.user?.name;
+  const canCancel = r.status === ReservationStatus.CONFIRMED || r.status === ReservationStatus.COACH_PENDING;
   const slotStart = r.slot?.startTime ? formatTime(r.slot.startTime) : '—';
   const slotEnd = r.slot?.endTime ? formatTime(r.slot.endTime) : '—';
 
@@ -172,14 +188,33 @@ export function CoachBookingDetailScreen() {
           </View>
           <View style={styles.priceRow}>
             <Text style={[styles.priceLabel, { color: tc.textSecondary }]}>{`Coach fee (${slotDurationHours}h × $${coachRate})`}</Text>
-            <Text style={[styles.priceValue, { color: '#0B1A3E' }]}>{coachFee > 0 ? formatPrice(coachFee) : 'TBD'}</Text>
+            <Text style={[styles.priceValue, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>{coachFee > 0 ? formatPrice(coachFee) : 'TBD'}</Text>
           </View>
           <View style={[styles.divider, { marginVertical: 6 }]} />
           <View style={styles.priceRow}>
             <Text style={[styles.priceLabel, { color: tc.textPrimary, fontWeight: '700' }]}>Total</Text>
-            <Text style={[styles.priceValue, { color: colors.navy, fontWeight: '800', fontSize: 18 }]}>{formatPrice(total)}</Text>
+            <Text style={[styles.priceValue, { color: isDark ? '#A2B8FF' : colors.navy, fontWeight: '800', fontSize: 18 }]}>{formatPrice(total)}</Text>
           </View>
         </View>
+
+        {/* Cancel contact card */}
+        {canCancel && (
+          <View style={[styles.contactCard, { borderColor: 'rgba(245,158,11,0.2)', backgroundColor: 'rgba(245,158,11,0.07)' }]}>
+            <View style={styles.contactCardHeader}>
+              <Ionicons name="warning-outline" size={16} color="#F59E0B" />
+              <Text style={styles.contactCardTitle}>Need to cancel?</Text>
+            </View>
+            <Text style={[styles.contactCardBody, { color: isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)' }]}>
+              To cancel this booking, please contact the venue owner directly.
+            </Text>
+            {branchPhone ? (
+              <TouchableOpacity style={styles.phoneBtn} onPress={() => Linking.openURL(`tel:${branchPhone}`)}>
+                <Ionicons name="call-outline" size={14} color="#F59E0B" />
+                <Text style={styles.phoneBtnText}>{branchPhone}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
 
         {/* Action buttons for COACH_PENDING */}
         {r.status === ReservationStatus.COACH_PENDING && (
@@ -191,6 +226,16 @@ export function CoachBookingDetailScreen() {
             <TouchableOpacity style={[styles.actionBtn, styles.declineBtn]} onPress={handleDecline}>
               <Ionicons name="close-circle-outline" size={18} color="#fff" />
               <Text style={styles.actionBtnText}>Decline Booking</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Mark as Paid button for CONFIRMED */}
+        {r.status === ReservationStatus.CONFIRMED && (
+          <View style={styles.actions}>
+            <TouchableOpacity style={[styles.actionBtn, styles.paidBtn]} onPress={handleMarkAsPaid}>
+              <Ionicons name="cash-outline" size={18} color="#fff" />
+              <Text style={styles.actionBtnText}>Mark as Paid</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -217,5 +262,12 @@ const styles = StyleSheet.create({
   actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14 },
   acceptBtn: { backgroundColor: '#00C16A' },
   declineBtn: { backgroundColor: '#FF4444' },
+  paidBtn: { backgroundColor: '#6B7280' },
   actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  contactCard: { borderRadius: 14, borderWidth: 1, padding: spacing.md, gap: 8 },
+  contactCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  contactCardTitle: { fontSize: 14, fontWeight: '700', color: '#F59E0B' },
+  contactCardBody: { fontSize: 13, lineHeight: 18 },
+  phoneBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(245,158,11,0.12)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  phoneBtnText: { color: '#F59E0B', fontSize: 13, fontWeight: '700' },
 });

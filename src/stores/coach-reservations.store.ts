@@ -21,6 +21,7 @@ interface CoachReservationsState {
   fetchReservationById: (id: number) => Promise<void>;
   acceptReservation: (id: number) => Promise<void>;
   rejectReservation: (id: number) => Promise<void>;
+  markAsPaid: (id: number) => Promise<void>;
   setStatusFilter: (status: ReservationStatus | null) => void;
 }
 
@@ -126,6 +127,19 @@ export const useCoachReservationsStore = create<CoachReservationsState>((set, ge
       currentReservation:
         s.currentReservation?.id === id
           ? { ...s.currentReservation, status: ReservationStatus.COACH_REJECTED }
+          : s.currentReservation,
+    }));
+  },
+
+  markAsPaid: async (id: number) => {
+    await api.put(`/coaches/me/reservations/${id}/mark-paid`);
+    set((s) => ({
+      reservations: s.reservations.map((r) =>
+        r.id === id ? { ...r, status: ReservationStatus.PAID } : r,
+      ),
+      currentReservation:
+        s.currentReservation?.id === id
+          ? { ...s.currentReservation, status: ReservationStatus.PAID }
           : s.currentReservation,
     }));
   },

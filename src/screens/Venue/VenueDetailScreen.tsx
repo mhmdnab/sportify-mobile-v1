@@ -140,14 +140,14 @@ export function VenueDetailScreen({ route, navigation }: Props) {
           )}
 
           {/* Book Now button */}
-          <TouchableOpacity style={[styles.bookBtn, { backgroundColor: isDark ? colors.navyLight : colors.navy }]} onPress={handleBookNow} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.bookBtn, { backgroundColor: isDark ? '#1D4ED8' : colors.navy }]} onPress={handleBookNow} activeOpacity={0.8}>
             <Text style={styles.bookBtnText}>{t('venue.bookNow')}</Text>
           </TouchableOpacity>
 
           {/* Location button */}
-          <TouchableOpacity style={[styles.locationBtn, { borderColor: isDark ? colors.navyLight : colors.navy }]} onPress={handleLocationPress}>
-            <Ionicons name="location-outline" size={18} color={isDark ? colors.navyLight : colors.navy} />
-            <Text style={[styles.locationBtnText, { color: isDark ? colors.navyLight : colors.navy }]}>{t('venue.location')}</Text>
+          <TouchableOpacity style={[styles.locationBtn, { borderColor: isDark ? '#A2B8FF' : colors.navy }]} onPress={handleLocationPress}>
+            <Ionicons name="location-outline" size={18} color={isDark ? '#A2B8FF' : colors.navy} />
+            <Text style={[styles.locationBtnText, { color: isDark ? '#A2B8FF' : colors.navy }]}>{t('venue.location')}</Text>
           </TouchableOpacity>
       </View>
 

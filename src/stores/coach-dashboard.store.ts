@@ -11,9 +11,17 @@ interface CoachDashboardData {
   availabilities: CoachAvailability[];
 }
 
+interface CoachEarnings {
+  total: number;
+  thisMonth: number;
+  thisWeek: number;
+  sessionCount: number;
+}
+
 interface CoachDashboardState extends CoachDashboardData {
   isLoading: boolean;
   error: string | null;
+  earnings: CoachEarnings;
   fetchDashboardData: () => Promise<void>;
 }
 
@@ -26,12 +34,17 @@ export const useCoachDashboardStore = create<CoachDashboardState>((set) => ({
   availabilities: [],
   isLoading: false,
   error: null,
+  earnings: { total: 0, thisMonth: 0, thisWeek: 0, sessionCount: 0 },
 
   fetchDashboardData: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.get<{ data: CoachDashboardData }>('/coaches/me/dashboard');
-      const data = res.data.data ?? res.data;
+      const [dashRes, earningsRes] = await Promise.all([
+        api.get<{ data: CoachDashboardData }>('/coaches/me/dashboard'),
+        api.get<{ data: CoachEarnings }>('/coaches/me/earnings'),
+      ]);
+      const data = dashRes.data.data ?? dashRes.data;
+      const earningsData = earningsRes.data.data ?? earningsRes.data;
       set({
         pendingCount: data.pendingCount ?? 0,
         confirmedCount: data.confirmedCount ?? 0,
@@ -39,6 +52,12 @@ export const useCoachDashboardStore = create<CoachDashboardState>((set) => ({
         upcomingToday: data.upcomingToday ?? [],
         recentReservations: data.recentReservations ?? [],
         availabilities: data.availabilities ?? [],
+        earnings: {
+          total: earningsData.total ?? 0,
+          thisMonth: earningsData.thisMonth ?? 0,
+          thisWeek: earningsData.thisWeek ?? 0,
+          sessionCount: earningsData.sessionCount ?? 0,
+        },
         isLoading: false,
       });
     } catch (error: any) {

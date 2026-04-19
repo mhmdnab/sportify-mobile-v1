@@ -10,17 +10,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
+import { Ionicons, FontAwesome6, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../../stores/auth.store';
 import { useCoachDashboardStore } from '../../../stores/coach-dashboard.store';
+import { useUIStore } from '../../../stores/ui.store';
+import { useNotificationsStore } from '../../../stores/notifications.store';
+import { useReservationsStore } from '../../../stores/reservations.store';
 import { useThemeStore } from '../../../stores/theme.store';
 import { useThemeColors } from '../../../theme/useThemeColors';
 import { spacing } from '../../../theme/spacing';
 import { BackgroundShapes } from '../../../components/ui/BackgroundShapes';
 import { Reservation, ReservationStatus } from '../../../types/api';
-import { formatTime } from '../../../utils/date';
+import { formatDate } from '../../../utils/date';
+import { colors } from '../../../theme/colors';
+import { radius } from '../../../theme/spacing';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -69,7 +73,7 @@ function HeroSection({ name, isDark }: { name: string; isDark: boolean }) {
             <Text style={heroStyles.name} numberOfLines={1}>{name}</Text>
           </View>
           <View style={heroStyles.roleBadge}>
-            <Ionicons name="fitness" size={11} color="rgba(255,255,255,0.8)" />
+            <FontAwesome6 name="people-group" size={10} color="rgba(255,255,255,0.8)" />
             <Text style={heroStyles.roleText}>Coach</Text>
           </View>
         </View>
@@ -92,6 +96,54 @@ const heroStyles = StyleSheet.create({
   sub: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 },
   decCircle: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: '#FFFFFF', right: -50, top: -60 },
   decSmall: { position: 'absolute', width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.06)', right: 40, bottom: -20 },
+});
+
+function RevenueCard({ earnings, isDark, tc }: { earnings: { total: number; thisMonth: number; thisWeek: number; sessionCount: number }; isDark: boolean; tc: any }) {
+  const accentColor = isDark ? '#A2B8FF' : colors.navy;
+  return (
+    <Animated.View entering={FadeInDown.delay(80).springify()} style={{ marginBottom: spacing.md }}>
+      <LinearGradient
+        colors={isDark ? ['#0C1832', '#0F2048'] : ['#FFFFFF', '#F0F4FF']}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={revStyles.card}
+      >
+        <View style={revStyles.top}>
+          <View style={[revStyles.iconBox, { backgroundColor: isDark ? 'rgba(162,184,255,0.12)' : 'rgba(11,26,62,0.08)' }]}>
+            <Ionicons name="wallet-outline" size={20} color={accentColor} />
+          </View>
+          <View style={revStyles.sessionPill}>
+            <Text style={[revStyles.sessionText, { color: isDark ? 'rgba(162,184,255,0.7)' : 'rgba(11,26,62,0.5)' }]}>{earnings.sessionCount} sessions</Text>
+          </View>
+        </View>
+        <Text style={[revStyles.totalLabel, { color: isDark ? 'rgba(162,184,255,0.55)' : 'rgba(11,26,62,0.45)' }]}>Total Earnings</Text>
+        <Text style={[revStyles.total, { color: accentColor }]}>${earnings.total.toFixed(0)}</Text>
+        <View style={revStyles.pillsRow}>
+          <View style={[revStyles.pill, { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : 'rgba(11,26,62,0.06)' }]}>
+            <Text style={[revStyles.pillLabel, { color: isDark ? 'rgba(162,184,255,0.55)' : 'rgba(11,26,62,0.45)' }]}>This Month</Text>
+            <Text style={[revStyles.pillValue, { color: accentColor }]}>${earnings.thisMonth.toFixed(0)}</Text>
+          </View>
+          <View style={[revStyles.pill, { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : 'rgba(11,26,62,0.06)' }]}>
+            <Text style={[revStyles.pillLabel, { color: isDark ? 'rgba(162,184,255,0.55)' : 'rgba(11,26,62,0.45)' }]}>This Week</Text>
+            <Text style={[revStyles.pillValue, { color: accentColor }]}>${earnings.thisWeek.toFixed(0)}</Text>
+          </View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+const revStyles = StyleSheet.create({
+  card: { borderRadius: 22, padding: spacing.lg },
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  iconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  sessionPill: {},
+  sessionText: { fontSize: 12, fontWeight: '600' },
+  totalLabel: { fontSize: 12, fontWeight: '500', marginBottom: 2 },
+  total: { fontSize: 36, fontWeight: '800', letterSpacing: -1, marginBottom: spacing.sm },
+  pillsRow: { flexDirection: 'row', gap: 10 },
+  pill: { flex: 1, borderRadius: 12, padding: 10 },
+  pillLabel: { fontSize: 11, fontWeight: '500', marginBottom: 2 },
+  pillValue: { fontSize: 18, fontWeight: '800' },
 });
 
 function MetricCard({ label, value, color, icon, delay, tc, isDark }: { label: string; value: number; color: string; icon: string; delay: number; tc: any; isDark: boolean }) {
@@ -122,9 +174,12 @@ function UpNextCard({ reservation, tc, isDark }: { reservation: Reservation; tc:
   return (
     <Animated.View entering={FadeInDown.delay(240).springify()} style={{ marginBottom: spacing.md }}>
       <LinearGradient colors={isDark ? ['#0C1832', '#112240'] : ['#FFFFFF', '#F0FBF5']} style={upStyles.card}>
-        <View style={upStyles.accentBar} />
+        <View style={[upStyles.accentBar, { backgroundColor: isDark ? '#3B82F6' : '#0B1A3E' }]} />
         <View style={upStyles.body}>
-          <View style={upStyles.badge}><View style={upStyles.badgeDot} /><Text style={upStyles.badgeLabel}>Up Next</Text></View>
+          <View style={upStyles.badge}>
+            <View style={[upStyles.badgeDot, { backgroundColor: isDark ? '#3B82F6' : '#0B1A3E' }]} />
+            <Text style={[upStyles.badgeLabel, { color: isDark ? '#7FAFD6' : '#0B1A3E' }]}>Up Next</Text>
+          </View>
           <Text style={[upStyles.time, { color: tc.textPrimary }]}>{start}</Text>
           <Text style={[upStyles.name, { color: tc.textPrimary }]} numberOfLines={1}>{userName}</Text>
           <View style={upStyles.meta}>
@@ -178,22 +233,84 @@ const actStyles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: '700' },
 });
 
+function OwnBookingCard({ reservation, onPress, tc, isDark }: { reservation: Reservation; onPress: () => void; tc: any; isDark: boolean }) {
+  const venueName = reservation.slot?.availability?.venue?.name ?? 'Venue';
+  const start = reservation.slot?.startTime ? formatAMPM(reservation.slot.startTime) : '';
+  const end = reservation.slot?.endTime ? formatAMPM(reservation.slot.endTime) : '';
+  const statusColor = STATUS_COLOR[reservation.status] ?? '#888';
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={[ownBookStyles.card, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}
+    >
+      <View style={[ownBookStyles.statusBar, { backgroundColor: statusColor }]} />
+      <View style={ownBookStyles.body}>
+        <View style={ownBookStyles.topRow}>
+          <Text style={[ownBookStyles.venue, { color: tc.textPrimary }]} numberOfLines={1}>{venueName}</Text>
+          <View style={[ownBookStyles.badge, { backgroundColor: `${statusColor}18` }]}>
+            <Text style={[ownBookStyles.badgeText, { color: statusColor }]}>{reservation.status.replace('_', ' ')}</Text>
+          </View>
+        </View>
+        <View style={ownBookStyles.meta}>
+          <Ionicons name="calendar-outline" size={12} color={tc.textHint} />
+          <Text style={[ownBookStyles.metaText, { color: tc.textSecondary }]}>{formatDate(reservation.slotDate)}</Text>
+          {start ? (
+            <>
+              <Text style={{ color: tc.textHint }}> · </Text>
+              <Ionicons name="time-outline" size={12} color={tc.textHint} />
+              <Text style={[ownBookStyles.metaText, { color: tc.textSecondary }]}>{start}{end ? ` – ${end}` : ''}</Text>
+            </>
+          ) : null}
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={tc.textHint} />
+    </TouchableOpacity>
+  );
+}
+
+const ownBookStyles = StyleSheet.create({
+  card: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.card, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1, overflow: 'hidden' },
+  statusBar: { width: 4, alignSelf: 'stretch' },
+  body: { flex: 1, padding: spacing.md },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  venue: { fontSize: 14, fontWeight: '600', flex: 1, marginRight: 8 },
+  badge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+  badgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+  metaText: { fontSize: 11 },
+});
+
 export function CoachDashboardScreen() {
-  const { t } = useTranslation();
   const isDark = useThemeStore((s) => s.isDark);
   const tc = useThemeColors();
   const user = useAuthStore((s) => s.user);
   const navigation = useNavigation<any>();
+  const openNotifications = useUIStore((s) => s.openNotifications);
+  const openDrawer = useUIStore((s) => s.openDrawer);
+  const unreadCount = useNotificationsStore((s) => s.unreadCount);
 
   const {
     pendingCount, confirmedCount, completedCount,
     upcomingToday, recentReservations, availabilities,
-    isLoading, fetchDashboardData,
+    isLoading, fetchDashboardData, earnings,
   } = useCoachDashboardStore();
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  const { reservations, fetchOwnReservations } = useReservationsStore();
 
-  const onRefresh = useCallback(() => { fetchDashboardData(); }, []);
+  const ownActiveBookings = reservations.filter(
+    (r) => r.status === ReservationStatus.PENDING || r.status === ReservationStatus.CONFIRMED,
+  );
+
+  useEffect(() => {
+    fetchDashboardData();
+    fetchOwnReservations();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    fetchDashboardData();
+    fetchOwnReservations();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#060F28' : '#F4F6FB' }}>
@@ -203,14 +320,56 @@ export function CoachDashboardScreen() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor="#0B1A3E" />}
         showsVerticalScrollIndicator={false}
       >
+        {/* Header row */}
+        <View style={styles.dashHeader}>
+          <View style={[styles.rolePill, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
+            <FontAwesome6 name="people-group" size={11} color={isDark ? '#A2B8FF' : colors.navy} />
+            <Text style={[styles.rolePillText, { color: isDark ? '#A2B8FF' : colors.navy }]}>Coach</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={openNotifications} style={[styles.headerBtn, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
+              <Ionicons name="notifications-outline" size={20} color={tc.textPrimary} />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={openDrawer} style={[styles.headerBtn, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
+              <Ionicons name="menu-outline" size={22} color={tc.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <HeroSection name={user?.name ?? 'Coach'} isDark={isDark} />
+
+        {/* Revenue card */}
+        <RevenueCard earnings={earnings} isDark={isDark} tc={tc} />
+
+        {/* Stadiums entry card */}
+        <Animated.View entering={FadeInDown.delay(50).springify()}>
+          <TouchableOpacity
+            style={[styles.stadiumCard, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('StadiumsScreen')}
+          >
+            <View style={[styles.stadiumIconBox, { backgroundColor: isDark ? 'rgba(162,184,255,0.1)' : 'rgba(11,26,62,0.08)' }]}>
+              <MaterialCommunityIcons name="stadium-outline" size={26} color={isDark ? '#A2B8FF' : colors.navy} />
+            </View>
+            <View style={styles.stadiumText}>
+              <Text style={[styles.stadiumLabel, { color: tc.textPrimary }]}>Stadiums</Text>
+              <Text style={[styles.stadiumHint, { color: tc.textHint }]}>Browse & book a venue</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={tc.textHint} />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Pending Approvals CTA */}
         {pendingCount > 0 && (
           <Animated.View entering={FadeInDown.delay(60).springify()}>
             <TouchableOpacity
               style={[styles.pendingCard, { backgroundColor: 'rgba(255,149,0,0.1)', borderColor: 'rgba(255,149,0,0.3)' }]}
-              onPress={() => navigation.navigate('Bookings')}
+              onPress={() => navigation.navigate('CoachBookingsTab')}
             >
               <Ionicons name="time-outline" size={20} color="#FF9500" />
               <Text style={[styles.pendingText, { color: '#FF9500' }]}>
@@ -225,7 +384,7 @@ export function CoachDashboardScreen() {
         <View style={styles.metricsRow}>
           <MetricCard label="Pending" value={pendingCount} color="#FF9500" icon="time-outline" delay={100} tc={tc} isDark={isDark} />
           <MetricCard label="Confirmed" value={confirmedCount} color="#00C16A" icon="checkmark-circle-outline" delay={140} tc={tc} isDark={isDark} />
-          <MetricCard label="Completed" value={completedCount} color="#0B1A3E" icon="trophy-outline" delay={180} tc={tc} isDark={isDark} />
+          <MetricCard label="Completed" value={completedCount} color="#6366F1" icon="trophy-outline" delay={180} tc={tc} isDark={isDark} />
         </View>
 
         {/* Up next */}
@@ -241,8 +400,8 @@ export function CoachDashboardScreen() {
           <Animated.View entering={FadeInDown.delay(260).springify()}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: tc.textPrimary }]}>My Availabilities</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Availability')}>
-                <Text style={{ color: '#0B1A3E', fontWeight: '600', fontSize: 13 }}>Edit</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('CoachAvailabilityTab')}>
+                <Text style={{ color: isDark ? '#7FAFD6' : '#0B1A3E', fontWeight: '600', fontSize: 13 }}>Edit</Text>
               </TouchableOpacity>
             </View>
             <View style={[styles.availCard, { backgroundColor: isDark ? '#0C1832' : '#FFFFFF' }]}>
@@ -255,6 +414,27 @@ export function CoachDashboardScreen() {
                 </View>
               ))}
             </View>
+          </Animated.View>
+        )}
+
+        {/* My Venue Bookings (pending + confirmed) */}
+        {ownActiveBookings.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(290).springify()}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: tc.textPrimary }]}>My Venue Bookings</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('StadiumsScreen')}>
+                <Text style={{ color: isDark ? '#7FAFD6' : '#0B1A3E', fontWeight: '600', fontSize: 13 }}>Browse</Text>
+              </TouchableOpacity>
+            </View>
+            {ownActiveBookings.slice(0, 5).map((r) => (
+              <OwnBookingCard
+                key={r.id}
+                reservation={r}
+                tc={tc}
+                isDark={isDark}
+                onPress={() => navigation.navigate('ReservationDetail', { reservationId: r.id })}
+              />
+            ))}
           </Animated.View>
         )}
 
@@ -276,6 +456,18 @@ export function CoachDashboardScreen() {
 
 const styles = StyleSheet.create({
   scroll: { padding: spacing.lg, paddingBottom: 40 },
+  dashHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  rolePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  rolePillText: { fontSize: 12, fontWeight: '700' },
+  headerActions: { flexDirection: 'row', gap: 8 },
+  headerBtn: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#FF3B30', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  badgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
+  stadiumCard: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 18, padding: spacing.md, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 },
+  stadiumIconBox: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  stadiumText: { flex: 1 },
+  stadiumLabel: { fontSize: 15, fontWeight: '700' },
+  stadiumHint: { fontSize: 12, marginTop: 2 },
   pendingCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: spacing.md, borderRadius: 14, borderWidth: 1, marginBottom: spacing.md },
   pendingText: { flex: 1, fontWeight: '600', fontSize: 14 },
   metricsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },

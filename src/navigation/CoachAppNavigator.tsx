@@ -8,10 +8,22 @@ import { CoachBookingsStack } from './CoachBookingsStack';
 import { CoachAvailabilityStack } from './CoachAvailabilityStack';
 import { ProfileStack } from './ProfileStack';
 import { coachTabs } from '../constants/coachTabs';
+import { NotificationsModal } from '../components/NotificationsModal';
+import { ProfileDrawer } from '../components/ProfileDrawer';
+import { useUIStore } from '../stores/ui.store';
 
 const Tab = createBottomTabNavigator();
 
 export function CoachAppNavigator() {
+  const notifVisible = useUIStore((s) => s.isNotificationsOpen);
+  const closeNotifications = useUIStore((s) => s.closeNotifications);
+  const isDrawerOpen = useUIStore((s) => s.isDrawerOpen);
+  const closeDrawer = useUIStore((s) => s.closeDrawer);
+
+  const handleDrawerNavigate = (screen: string) => {
+    closeDrawer();
+  };
+
   return (
     <View style={StyleSheet.absoluteFill}>
       <Tab.Navigator
@@ -27,6 +39,9 @@ export function CoachAppNavigator() {
         <Tab.Screen name="CoachAvailabilityTab" component={CoachAvailabilityStack} />
         <Tab.Screen name="CoachProfileTab" component={ProfileStack} />
       </Tab.Navigator>
+
+      <NotificationsModal visible={notifVisible} onClose={closeNotifications} />
+      <ProfileDrawer visible={isDrawerOpen} onClose={closeDrawer} onNavigate={handleDrawerNavigate} />
     </View>
   );
 }

@@ -13,7 +13,7 @@ import {
   Switch,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { useThemeColors } from '../../theme/useThemeColors';
@@ -61,9 +61,7 @@ export function ReservationScreen({ route, navigation }: Props) {
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!currentVenue || currentVenue.id !== venueId) {
-      fetchVenueById(venueId);
-    }
+    fetchVenueById(venueId, formatSlotDate(selectedDate));
   }, [venueId]);
 
   useEffect(() => {
@@ -91,7 +89,7 @@ export function ReservationScreen({ route, navigation }: Props) {
   const hasSlots = (date: Date) => {
     const dow = getDayOfWeek(date);
     const avail = currentVenue?.availability?.find((a) => a.day === dow && a.isOpen);
-    return (avail?.slots || []).filter((s) => s.isAvailable !== false).length > 0;
+    return (avail?.slots || []).length > 0;
   };
 
   const availableSlots = useMemo(() => {
@@ -99,12 +97,15 @@ export function ReservationScreen({ route, navigation }: Props) {
     const dayAvailability = currentVenue.availability.find(
       (a) => a.day === dayOfWeek && a.isOpen,
     );
-    return dayAvailability?.slots || [];
+    return [...(dayAvailability?.slots || [])].sort((a, b) =>
+      (a.startTime as string).localeCompare(b.startTime as string),
+    );
   }, [currentVenue, dayOfWeek]);
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     setSelectedSlots([]);
+    fetchVenueById(venueId, formatSlotDate(date));
   };
 
   const handleSlotSelect = (slot: Slot) => {
@@ -143,22 +144,13 @@ export function ReservationScreen({ route, navigation }: Props) {
       });
       setConfirmVisible(false);
       setSelectedSlots([]);
-      await fetchVenueById(venueId);
+      await fetchVenueById(venueId, formatSlotDate(selectedDate));
       Alert.alert(
         selectedSlots.length > 1 ? 'Bookings Confirmed!' : 'Booking Confirmed!',
         selectedSlots.length > 1
           ? `${selectedSlots.length} slots booked successfully.`
-          : 'Your reservation has been created.',
-        [{
-          text: 'OK',
-          onPress: () => {
-            navigation.goBack();
-            (navigation as any).navigate('BookingsTab', {
-              screen: 'ReservationDetail',
-              params: { reservationId: reservation.id },
-            });
-          },
-        }],
+          : 'Your reservation has been created. You can view it in your bookings.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.message || 'Something went wrong. Please try again.';
@@ -193,13 +185,17 @@ export function ReservationScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 key={day.date.toISOString()}
                 onPress={() => handleDateSelect(day.date)}
-                style={[styles.dateChip, { backgroundColor: tc.cardBg }, isSelected && styles.dateChipSelected]}
+                style={[
+                  styles.dateChip,
+                  isDark ? { backgroundColor: '#0F1F45', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' } : { backgroundColor: tc.cardBg },
+                  isSelected && { backgroundColor: isDark ? '#1D4ED8' : colors.navy, borderColor: isDark ? '#3B6FE0' : colors.navy },
+                ]}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.dateLabel, { color: tc.textSecondary }, isSelected && styles.dateLabelSelected]}>
+                <Text style={[styles.dateLabel, { color: isSelected ? colors.white : tc.textSecondary }]}>
                   {day.label}
                 </Text>
-                <Text style={[styles.dateNum, { color: tc.textPrimary }, isSelected && styles.dateNumSelected]}>
+                <Text style={[styles.dateNum, { color: isSelected ? colors.white : tc.textPrimary }]}>
                   {day.dayNum}
                 </Text>
                 <View style={styles.dotRow}>
@@ -214,7 +210,7 @@ export function ReservationScreen({ route, navigation }: Props) {
         <View style={styles.reservationNameSection}>
           <Text style={[styles.sectionLabel, { color: tc.textPrimary }]}>Reservation Name</Text>
           <View style={[styles.reservationNameCard, { backgroundColor: tc.cardBg }]}>
-            <Ionicons name="person-outline" size={18} color={tc.textSecondary} />
+            <FontAwesome6 name="people-group" size={16} color={tc.textSecondary} />
             <Text style={[styles.reservationNameText, { color: tc.textPrimary }]}>{user?.name || 'Guest'}</Text>
           </View>
         </View>
@@ -223,7 +219,7 @@ export function ReservationScreen({ route, navigation }: Props) {
         <Text style={[styles.sectionLabel, { color: tc.textPrimary }]}>
           Available Time Slots
           {selectedSlots.length > 0 && (
-            <Text style={{ color: colors.navy, fontSize: 13 }}> · {selectedSlots.length} selected</Text>
+            <Text style={{ color: isDark ? '#A2B8FF' : colors.navy, fontSize: 13 }}> · {selectedSlots.length} selected</Text>
           )}
         </Text>
         {availableSlots.length === 0 ? (
@@ -244,8 +240,10 @@ export function ReservationScreen({ route, navigation }: Props) {
                   disabled={isUnavailable}
                   style={[
                     styles.slotCard,
-                    { backgroundColor: tc.cardBg },
-                    isSelected && styles.slotCardSelected,
+                    isDark
+                      ? { backgroundColor: '#0F1F45', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
+                      : { backgroundColor: tc.cardBg },
+                    isSelected && { backgroundColor: isDark ? '#1D4ED8' : colors.navy, borderColor: isDark ? '#3B6FE0' : colors.navy },
                     isUnavailable && styles.slotCardUnavailable,
                   ]}
                   activeOpacity={isUnavailable ? 1 : 0.7}
@@ -254,14 +252,14 @@ export function ReservationScreen({ route, navigation }: Props) {
                     <Ionicons
                       name={isSelected ? 'checkmark-circle' : 'time-outline'}
                       size={18}
-                      color={isUnavailable ? tc.textHint : isSelected ? colors.white : tc.textPrimary}
+                      color={isUnavailable ? tc.textHint : isSelected ? colors.white : (isDark ? '#A2B8FF' : tc.textPrimary)}
                     />
-                    <Text style={[styles.slotTime, { color: tc.textPrimary }, isSelected && styles.slotTextSelected, isUnavailable && styles.slotTextUnavailable]}>
+                    <Text style={[styles.slotTime, { color: isSelected ? colors.white : tc.textPrimary }, isUnavailable && styles.slotTextUnavailable]}>
                       {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                     </Text>
                   </View>
                   <View style={styles.slotRightCol}>
-                    <Text style={[styles.slotPrice, isSelected && styles.slotTextSelected, isUnavailable && styles.slotTextUnavailable]}>
+                    <Text style={[styles.slotPrice, { color: isSelected ? colors.white : (isDark ? '#A2B8FF' : colors.navy) }, isUnavailable && styles.slotTextUnavailable]}>
                       {formatPrice(slot.price)}
                     </Text>
                     {isUnavailable && <Text style={styles.slotUnavailableLabel}>Booked</Text>}
@@ -277,13 +275,13 @@ export function ReservationScreen({ route, navigation }: Props) {
           <View style={[styles.coachSection, { backgroundColor: tc.cardBg }]}>
             <View style={styles.coachToggleRow}>
               <View style={styles.coachToggleLeft}>
-                <Ionicons name="fitness-outline" size={18} color="#0B1A3E" />
+                <FontAwesome6 name="people-group" size={16} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
                 <Text style={[styles.coachToggleLabel, { color: tc.textPrimary }]}>Book with Coach</Text>
               </View>
               <Switch
                 value={withCoach}
                 onValueChange={setWithCoach}
-                trackColor={{ true: '#0B1A3E', false: '#888' }}
+                trackColor={{ true: isDark ? colors.navyLight : '#0B1A3E', false: isDark ? '#2A3A5C' : '#888' }}
                 thumbColor="#fff"
               />
             </View>
@@ -298,15 +296,15 @@ export function ReservationScreen({ route, navigation }: Props) {
                       style={[styles.coachItem, isCoachSelected && styles.coachItemSelected]}
                     >
                       <View style={styles.coachItemLeft}>
-                        <View style={[styles.coachAvatar, { backgroundColor: isCoachSelected ? '#0B1A3E' : 'rgba(11,26,62,0.1)' }]}>
-                          <Ionicons name="person" size={16} color={isCoachSelected ? '#fff' : '#0B1A3E'} />
+                        <View style={[styles.coachAvatar, { backgroundColor: isCoachSelected ? (isDark ? colors.navyLight : '#0B1A3E') : (isDark ? 'rgba(162,184,255,0.12)' : 'rgba(11,26,62,0.1)') }]}>
+                          <FontAwesome6 name="people-group" size={13} color={isCoachSelected ? '#fff' : (isDark ? '#A2B8FF' : '#0B1A3E')} />
                         </View>
                         <View>
                           <Text style={[styles.coachName, { color: tc.textPrimary }]}>{coach.user?.name ?? `Coach #${coach.id}`}</Text>
                           {coach.sport ? <Text style={[styles.coachSport, { color: tc.textSecondary }]}>{coach.sport}</Text> : null}
                         </View>
                       </View>
-                      <Text style={[styles.coachRate, { color: '#0B1A3E' }]}>${coach.hourlyRate}/hr</Text>
+                      <Text style={[styles.coachRate, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>${coach.hourlyRate}/hr</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -326,11 +324,11 @@ export function ReservationScreen({ route, navigation }: Props) {
               {withCoach && selectedCoachId ? 'Total (with coach)' : 'Total'}
               {selectedSlots.length > 1 ? ` · ${selectedSlots.length} slots` : ''}
             </Text>
-            <Text style={styles.costValue}>{formatPrice(grandTotal)}</Text>
+            <Text style={[styles.costValue, { color: isDark ? '#A2B8FF' : colors.navy }]}>{formatPrice(grandTotal)}</Text>
           </View>
         )}
         <TouchableOpacity
-          style={[styles.bookNowBtn, selectedSlots.length === 0 && styles.bookNowBtnDisabled]}
+          style={[styles.bookNowBtn, { backgroundColor: isDark ? '#1D4ED8' : colors.navy }, selectedSlots.length === 0 && styles.bookNowBtnDisabled]}
           onPress={handleBookNow}
           activeOpacity={0.8}
           disabled={selectedSlots.length === 0}
@@ -420,10 +418,11 @@ export function ReservationScreen({ route, navigation }: Props) {
 }
 
 function SummaryRow({ label, value, highlight, tc }: { label: string; value: string; highlight?: boolean; tc: any }) {
+  const isDarkRow = useThemeStore((s) => s.isDark);
   return (
     <View style={[summaryStyles.row, { borderBottomColor: tc.border }]}>
       <Text style={[summaryStyles.label, { color: tc.textSecondary }]}>{label}</Text>
-      <Text style={[summaryStyles.value, { color: tc.textPrimary }, highlight && summaryStyles.highlight]}>{value}</Text>
+      <Text style={[summaryStyles.value, { color: highlight ? (isDarkRow ? '#A2B8FF' : colors.navy) : tc.textPrimary }, highlight && summaryStyles.highlightSize]}>{value}</Text>
     </View>
   );
 }
@@ -432,7 +431,7 @@ const summaryStyles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1 },
   label: { fontSize: 14, flex: 1, paddingRight: 8 },
   value: { fontSize: 14, fontWeight: '600', textAlign: 'right' },
-  highlight: { color: colors.navy, fontSize: 16, fontWeight: '700' },
+  highlightSize: { fontSize: 16, fontWeight: '700' },
 });
 
 const styles = StyleSheet.create({
@@ -465,11 +464,8 @@ const styles = StyleSheet.create({
       android: { elevation: 2 },
     }),
   },
-  dateChipSelected: { backgroundColor: colors.navy },
   dateLabel: { fontSize: 12, fontWeight: '500', marginBottom: 4 },
-  dateLabelSelected: { color: colors.white },
   dateNum: { fontSize: 20, fontWeight: '700' },
-  dateNumSelected: { color: colors.white },
   dotRow: { height: 6, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   availDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#22c55e' },
   availDotSelected: { backgroundColor: colors.white },
@@ -492,14 +488,13 @@ const styles = StyleSheet.create({
       android: { elevation: 2 },
     }),
   },
-  slotCardSelected: { backgroundColor: colors.navy, borderWidth: 1.5, borderColor: colors.navy },
+  slotCardSelected: { borderWidth: 1.5 },
   slotCardUnavailable: { opacity: 0.45, borderWidth: 1.5, borderStyle: 'dashed' },
   slotRightCol: { alignItems: 'flex-end', gap: 2 },
   slotUnavailableLabel: { fontSize: 10, fontWeight: '600', color: colors.error, textTransform: 'uppercase', letterSpacing: 0.5 },
   slotTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   slotTime: { fontSize: 15, fontWeight: '600' },
-  slotPrice: { fontSize: 15, fontWeight: '700', color: colors.navy },
-  slotTextSelected: { color: colors.white },
+  slotPrice: { fontSize: 15, fontWeight: '700' },
   slotTextUnavailable: { color: colors.textHint },
   noSlotsContainer: { alignItems: 'center', paddingVertical: 40, gap: 12 },
   noSlotsText: { fontSize: 15 },
@@ -515,8 +510,8 @@ const styles = StyleSheet.create({
   },
   costRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   costLabel: { fontSize: 16, fontWeight: '600' },
-  costValue: { fontSize: 22, fontWeight: '700', color: colors.navy },
-  bookNowBtn: { backgroundColor: colors.navy, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  costValue: { fontSize: 22, fontWeight: '700' },
+  bookNowBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   bookNowBtnDisabled: { backgroundColor: colors.textHint },
   bookNowText: { fontSize: 17, fontWeight: '700', color: colors.white },
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
@@ -540,9 +535,9 @@ const styles = StyleSheet.create({
   coachItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: spacing.md, borderRadius: 12, borderWidth: 1,
-    borderColor: 'rgba(11,26,62,0.15)', backgroundColor: 'rgba(11,26,62,0.04)',
+    borderColor: 'rgba(130,150,190,0.2)', backgroundColor: 'rgba(130,150,190,0.04)',
   },
-  coachItemSelected: { borderColor: '#0B1A3E', backgroundColor: 'rgba(11,26,62,0.1)' },
+  coachItemSelected: { borderColor: '#162B5C', backgroundColor: 'rgba(162,184,255,0.08)' },
   coachItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   coachAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   coachName: { fontSize: 14, fontWeight: '600' },

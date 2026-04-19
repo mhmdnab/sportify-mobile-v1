@@ -4,9 +4,9 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Alert,
   TouchableOpacity,
   Platform,
+  Linking,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -59,6 +59,10 @@ const STATUS_META: Record<ReservationStatus, { color: string; icon: any; label: 
     color: colors.textSecondary, icon: 'cash-outline',
     label: 'Paid', description: 'Payment has been recorded.',
   },
+  [ReservationStatus.EXPIRED]: {
+    color: '#9CA3AF', icon: 'alert-circle-outline',
+    label: 'Expired', description: 'This booking was not confirmed in time.',
+  },
 };
 
 function parseDuration(startTime: string, endTime: string): number {
@@ -71,21 +75,11 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
   const { reservationId } = route.params;
   const tc = useThemeColors();
   const isDark = useThemeStore((s) => s.isDark);
-  const { currentReservation, isLoading, error, fetchReservationById, cancelReservation } = useReservationsStore();
+  const { currentReservation, isLoading, error, fetchReservationById } = useReservationsStore();
 
   useEffect(() => {
     fetchReservationById(reservationId);
   }, [reservationId]);
-
-  const handleCancel = () => {
-    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Yes, Cancel', style: 'destructive',
-        onPress: async () => { try { await cancelReservation(reservationId); } catch {} },
-      },
-    ]);
-  };
 
   if (isLoading && !currentReservation) {
     return (
@@ -156,7 +150,7 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
         </View>
 
         {/* Booking Info */}
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
           <SectionHeader icon="calendar-outline" title="Booking Info" tc={tc} />
           <Row label="Booking ID" value={`#${r.id}`} tc={tc} />
           <Row label="Venue" value={venueName} tc={tc} />
@@ -168,7 +162,7 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
 
         {/* Time Slots (multi) or single time row */}
         {isMultiSlot ? (
-          <View style={[styles.card, { backgroundColor: cardBg }]}>
+          <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
             <SectionHeader icon="time-outline" title="Time Slots" tc={tc} />
             {allSlots.map((s, idx) => (
               <View
@@ -181,13 +175,13 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
                     {s.startTime && s.endTime ? `${formatTime(s.startTime)} – ${formatTime(s.endTime)}` : '—'}
                   </Text>
                 </View>
-                <Text style={[styles.slotPrice, { color: colors.navy }]}>{formatPrice(s.price)}</Text>
+                <Text style={[styles.slotPrice, { color: isDark ? '#A2B8FF' : colors.navy }]}>{formatPrice(s.price)}</Text>
               </View>
             ))}
           </View>
         ) : (
           r.slot && (
-            <View style={[styles.card, { backgroundColor: cardBg }]}>
+            <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
               <SectionHeader icon="time-outline" title="Time" tc={tc} />
               <Row label="Slot" value={`${formatTime(r.slot.startTime)} – ${formatTime(r.slot.endTime)}`} tc={tc} isLast />
             </View>
@@ -196,38 +190,35 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
 
         {/* Coach */}
         {r.withCoach && (
-          <View style={[styles.card, { backgroundColor: cardBg }]}>
-            <SectionHeader icon="fitness-outline" title="Coach" tc={tc} color="#0B1A3E" />
+          <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
+            <SectionHeader icon="fitness-outline" title="Coach" tc={tc} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
             {r.coach?.user?.name && <Row label="Coach" value={r.coach.user.name} tc={tc} />}
             {r.coachRate && <Row label="Hourly Rate" value={`$${r.coachRate}/hr`} tc={tc} />}
-            {r.status === ReservationStatus.COACH_PENDING && <Row label="Status" value="Awaiting confirmation" tc={tc} valueColor="#0B1A3E" />}
-            {r.status === ReservationStatus.COACH_REJECTED && <Row label="Status" value="Coach declined" tc={tc} valueColor="#0B1A3E" />}
+            {r.status === ReservationStatus.COACH_PENDING && <Row label="Status" value="Awaiting confirmation" tc={tc} valueColor={isDark ? '#A2B8FF' : '#0B1A3E'} />}
+            {r.status === ReservationStatus.COACH_REJECTED && <Row label="Status" value="Coach declined" tc={tc} valueColor={isDark ? '#A2B8FF' : '#0B1A3E'} />}
             <Row label="Session Duration" value={`${totalDuration}h`} tc={tc} isLast />
           </View>
         )}
 
         {/* Cost Breakdown */}
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <View style={[styles.card, { backgroundColor: cardBg }, isDark && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}>
           <SectionHeader icon="cash-outline" title="Cost Breakdown" tc={tc} />
           <Row label="Venue fee" value={formatPrice(totalVenue)} tc={tc} />
           {r.withCoach && (
             <Row
               label={`Coach fee (${totalDuration}h × $${r.coachRate ?? 0})`}
               value={coachFee > 0 ? formatPrice(coachFee) : 'TBD'}
-              tc={tc} valueColor="#0B1A3E"
+              tc={tc} valueColor={isDark ? '#A2B8FF' : '#0B1A3E'}
             />
           )}
           <View style={[styles.totalRow, { borderTopColor: tc.border }]}>
             <Text style={[styles.totalLabel, { color: tc.textPrimary }]}>Total</Text>
-            <Text style={[styles.totalValue, { color: colors.navy }]}>{formatPrice(total)}</Text>
+            <Text style={[styles.totalValue, { color: isDark ? '#A2B8FF' : colors.navy }]}>{formatPrice(total)}</Text>
           </View>
         </View>
 
         {canCancel && (
-          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel} activeOpacity={0.8}>
-            <Ionicons name="close-circle-outline" size={18} color={colors.error} />
-            <Text style={styles.cancelBtnText}>{isMultiSlot ? 'Cancel All Slots' : 'Cancel Booking'}</Text>
-          </TouchableOpacity>
+          <CancelContactCard r={r} tc={tc} isDark={isDark} />
         )}
 
         <View style={{ height: 40 }} />
@@ -235,6 +226,62 @@ export function ReservationDetailScreen({ route, navigation }: Props) {
     </SafeAreaView>
   );
 }
+
+function CancelContactCard({ r, tc, isDark }: { r: any; tc: any; isDark: boolean }) {
+  const branchPhone = r.slot?.availability?.venue?.branch?.phone;
+  const coachPhone = r.coach?.user?.phone ?? r.coach?.user?.email;
+  const hasCoach = !!(r as any).withCoach;
+
+  return (
+    <View style={[cancelCardStyles.wrap, isDark && { borderColor: 'rgba(245,158,11,0.2)' }]}>
+      <View style={cancelCardStyles.titleRow}>
+        <Ionicons name="information-circle-outline" size={18} color="#F59E0B" />
+        <Text style={cancelCardStyles.title}>Want to cancel?</Text>
+      </View>
+      <Text style={[cancelCardStyles.body, { color: tc.textSecondary }]}>
+        To cancel this booking, please contact the venue directly.
+      </Text>
+      {branchPhone && (
+        <TouchableOpacity style={cancelCardStyles.contactRow} onPress={() => Linking.openURL(`tel:${branchPhone}`)}>
+          <Ionicons name="call-outline" size={15} color="#F59E0B" />
+          <Text style={cancelCardStyles.contactText}>{branchPhone}</Text>
+          <Ionicons name="arrow-forward-outline" size={13} color="#F59E0B" />
+        </TouchableOpacity>
+      )}
+      {hasCoach && coachPhone && (
+        <>
+          <Text style={[cancelCardStyles.body, { color: tc.textSecondary, marginTop: 8 }]}>
+            This booking includes a coach. You may also contact them:
+          </Text>
+          <TouchableOpacity
+            style={cancelCardStyles.contactRow}
+            onPress={() => Linking.openURL(coachPhone.includes('@') ? `mailto:${coachPhone}` : `tel:${coachPhone}`)}
+          >
+            <Ionicons name={coachPhone.includes('@') ? 'mail-outline' : 'call-outline'} size={15} color="#A2B8FF" />
+            <Text style={[cancelCardStyles.contactText, { color: '#A2B8FF' }]}>{coachPhone}</Text>
+            <Ionicons name="arrow-forward-outline" size={13} color="#A2B8FF" />
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+}
+const cancelCardStyles = StyleSheet.create({
+  wrap: {
+    borderRadius: 16, padding: 16, marginBottom: 14,
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderWidth: 1, borderColor: 'rgba(245,158,11,0.15)',
+  },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  title: { fontSize: 14, fontWeight: '700', color: '#F59E0B' },
+  body: { fontSize: 13, lineHeight: 18 },
+  contactRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 10, backgroundColor: 'rgba(245,158,11,0.1)',
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+  },
+  contactText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#F59E0B' },
+});
 
 function SectionHeader({ icon, title, tc, color }: { icon: any; title: string; tc: any; color?: string }) {
   return (
@@ -306,9 +353,4 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontSize: 15, fontWeight: '700' },
   totalValue: { fontSize: 18, fontWeight: '800' },
-  cancelBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: 'rgba(255,68,68,0.08)', borderRadius: 14, paddingVertical: 14,
-  },
-  cancelBtnText: { color: colors.error, fontSize: 15, fontWeight: '700' },
 });

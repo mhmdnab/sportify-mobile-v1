@@ -15,13 +15,14 @@ interface ReservationCardProps {
 
 const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: '#FF9500',
-  [ReservationStatus.CONFIRMED]: colors.navy,
+  [ReservationStatus.CONFIRMED]: '#3B82F6',
   [ReservationStatus.CANCELLED]: colors.error,
   [ReservationStatus.REJECTED]: '#FF3B30',
   [ReservationStatus.PLAYED]: '#007AFF',
   [ReservationStatus.PAID]: colors.textSecondary,
   [ReservationStatus.COACH_PENDING]: '#F97316',
-  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
+  [ReservationStatus.COACH_REJECTED]: '#EF4444',
+  [ReservationStatus.EXPIRED]: '#9CA3AF',
 };
 
 export function ReservationCard({ reservation, onPress }: ReservationCardProps) {
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
   },
   priceText: {
     fontSize: 13,
-    color: colors.navy,
+    color: '#3B82F6',
     fontWeight: '600',
   },
 });

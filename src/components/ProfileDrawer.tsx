@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,10 +98,23 @@ export function ProfileDrawer({ visible, onClose, onNavigate }: ProfileDrawerPro
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
-  const handleLogout = async () => {
-    onClose();
-    await logout();
-    onNavigate('logout');
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            onClose();
+            await logout();
+            onNavigate('logout');
+          },
+        },
+      ],
+    );
   };
 
   return (

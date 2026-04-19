@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useThemeColors } from '../../theme/useThemeColors';
@@ -10,8 +9,8 @@ import { spacing } from '../../theme/spacing';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useReservationsStore } from '../../stores/reservations.store';
+import { useAuthStore } from '../../stores/auth.store';
 import { Reservation, ReservationStatus } from '../../types/api';
-import { BookingsStackParamList } from '../../types/navigation';
 import { ReservationCard } from './components/ReservationCard';
 import { BookingsSkeleton } from './components/BookingsSkeleton';
 import { BackgroundShapes } from '../../components/ui/BackgroundShapes';
@@ -21,18 +20,19 @@ import { formatDate, formatTime } from '../../utils/date';
 import { formatPrice } from '../../utils/currency';
 import { radius } from '../../theme/spacing';
 
-type Nav = NativeStackNavigationProp<BookingsStackParamList, 'MyBookings'>;
+type Nav = { navigate: (screen: string, params?: any) => void };
 type FilterKey = 'all' | ReservationStatus;
 
 const statusColors: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: '#FF9500',
-  [ReservationStatus.CONFIRMED]: colors.navy,
+  [ReservationStatus.CONFIRMED]: '#3B82F6',
   [ReservationStatus.CANCELLED]: colors.error,
   [ReservationStatus.REJECTED]: '#FF3B30',
   [ReservationStatus.PLAYED]: '#007AFF',
   [ReservationStatus.PAID]: '#6B7280',
   [ReservationStatus.COACH_PENDING]: '#F97316',
-  [ReservationStatus.COACH_REJECTED]: '#0B1A3E',
+  [ReservationStatus.COACH_REJECTED]: '#EF4444',
+  [ReservationStatus.EXPIRED]: '#9CA3AF',
 };
 
 const filterPills: { key: FilterKey; label: string }[] = [
@@ -44,6 +44,7 @@ const filterPills: { key: FilterKey; label: string }[] = [
   { key: ReservationStatus.PAID, label: 'Paid' },
   { key: ReservationStatus.CANCELLED, label: 'Cancelled' },
   { key: ReservationStatus.REJECTED, label: 'Rejected' },
+  { key: ReservationStatus.EXPIRED, label: 'Expired' },
 ];
 
 function ReservationItem({ reservation, onPress, tc }: { reservation: Reservation; onPress: () => void; tc: any }) {
@@ -111,7 +112,7 @@ function ReservationItem({ reservation, onPress, tc }: { reservation: Reservatio
         {total > 0 && (
           <View style={styles.priceRow}>
             <Ionicons name="cash-outline" size={13} color={tc.textHint} />
-            <Text style={[styles.priceText, { color: colors.navy }]}>
+            <Text style={[styles.priceText, { color: isDark ? '#A2B8FF' : colors.navy }]}>
               {formatPrice(total)}{reservation.withCoach ? ' (with coach)' : ''}
             </Text>
           </View>
@@ -128,7 +129,13 @@ export function MyBookingsScreen() {
   const tc = useThemeColors();
   const isDark = useThemeStore((s) => s.isDark);
   const { reservations, isLoading, error, fetchOwnReservations } = useReservationsStore();
+  const user = useAuthStore((s) => s.user);
+  const isCoach = !!user?.coach;
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+
+  const visiblePills = isCoach
+    ? filterPills.filter((p) => p.key !== ReservationStatus.COACH_PENDING && p.key !== ReservationStatus.COACH_REJECTED)
+    : filterPills;
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
@@ -158,9 +165,9 @@ export function MyBookingsScreen() {
         style={styles.pillScroll}
         contentContainerStyle={styles.pillRow}
       >
-        {filterPills.map((pill) => {
+        {visiblePills.map((pill) => {
           const isActive = activeFilter === pill.key;
-          const activeColor = pill.key !== 'all' ? statusColors[pill.key as ReservationStatus] : colors.navy;
+          const activeColor = pill.key !== 'all' ? statusColors[pill.key as ReservationStatus] : '#3B82F6';
           return (
             <TouchableOpacity
               key={pill.key}

@@ -1,7 +1,16 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import Constants from 'expo-constants';
 import { getAccessToken, getRefreshToken, setTokens, clearTokens } from './secure-store';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+function getBaseUrl(): string {
+  if (__DEV__) {
+    const host = Constants.expoConfig?.hostUri?.split(':')[0];
+    if (host) return `http://${host}:5001/api/v1`;
+  }
+  return process.env.EXPO_PUBLIC_API_BASE_URL!;
+}
+
+const API_BASE_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -50,7 +59,8 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isChangePassword = originalRequest.url?.includes('change-password');
+    if (error.response?.status === 401 && !originalRequest._retry && !isChangePassword) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({

@@ -12,6 +12,8 @@ interface AuthState {
   isHydrated: boolean;
 
   login: (data: LoginRequest) => Promise<void>;
+  googleLogin: (accessToken: string) => Promise<void>;
+  appleLogin: (identityToken: string, fullName?: string | null) => Promise<void>;
   register: (data: RegisterRequest) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -25,6 +27,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   isOnboarded: false,
   isHydrated: false,
+
+  appleLogin: async (identityToken: string, fullName?: string | null) => {
+    set({ isLoading: true });
+    try {
+      const response = await api.post<AuthResponse>('/users/signin/apple-mobile', { identityToken, fullName });
+      const { accessToken, refreshToken, ...user } = response.data;
+      await setTokens(accessToken, refreshToken);
+      set({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  googleLogin: async (accessToken: string) => {
+    set({ isLoading: true });
+    try {
+      const response = await api.post<AuthResponse>('/users/signin/google-mobile', { accessToken });
+      const { accessToken: appAccessToken, refreshToken, ...user } = response.data;
+      await setTokens(appAccessToken, refreshToken);
+      set({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
 
   login: async (data: LoginRequest) => {
     set({ isLoading: true });

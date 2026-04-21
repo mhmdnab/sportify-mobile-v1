@@ -114,11 +114,6 @@ export function ProfileScreen() {
           <View style={[styles.decoCircle, { width: 200, height: 200, right: -40, top: -60 }]} />
           <View style={[styles.decoCircle, { width: 130, height: 130, left: -30, bottom: -50, opacity: 0.06 }]} />
 
-          {/* Back button */}
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={20} color="rgba(255,255,255,0.9)" />
-          </TouchableOpacity>
-
           {/* Avatar */}
           <View style={styles.avatarContainer}>
             <View style={[styles.avatarRing, { borderColor: 'rgba(255,255,255,0.25)' }]}>
@@ -173,15 +168,6 @@ export function ProfileScreen() {
             cardBg={cardBg}
             tc={tc}
             isDark={isDark}
-            action={
-              <TouchableOpacity
-                style={[styles.editPill, { backgroundColor: isDark ? 'rgba(162,184,255,0.12)' : '#EEF0FF' }]}
-                onPress={() => navigation.navigate('EditProfile')}
-              >
-                <Ionicons name="pencil-outline" size={13} color={isDark ? '#A2B8FF' : '#0B1A3E'} />
-                <Text style={[styles.editPillText, { color: isDark ? '#A2B8FF' : '#0B1A3E' }]}>Edit</Text>
-              </TouchableOpacity>
-            }
           >
             <InfoRow icon="person-circle-outline" label={t('profile.username')} value={user?.name || '—'} tc={tc} />
             <View style={[styles.rowDivider, { backgroundColor: tc.border }]} />
@@ -269,7 +255,7 @@ export function ProfileScreen() {
             tc={tc}
             isDark={isDark}
           >
-            <TouchableOpacity style={styles.menuRow}>
+            <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('ChangePassword')}>
               <View style={styles.menuRowLeft}>
                 <View style={[styles.menuRowIconBox, { backgroundColor: isDark ? 'rgba(233,30,99,0.12)' : '#FCE4EC' }]}>
                   <Ionicons name="key-outline" size={15} color={isDark ? '#F472B6' : '#E91E63'} />

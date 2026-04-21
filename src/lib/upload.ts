@@ -1,7 +1,16 @@
 import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
 import { getAccessToken } from './secure-store';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+function getBaseUrl(): string {
+  if (__DEV__) {
+    const host = Constants.expoConfig?.hostUri?.split(':')[0];
+    if (host) return `http://${host}:5001/api/v1`;
+  }
+  return process.env.EXPO_PUBLIC_API_BASE_URL!;
+}
+
+const API_BASE_URL = getBaseUrl();
 
 /**
  * Opens the device image picker and uploads the selected image

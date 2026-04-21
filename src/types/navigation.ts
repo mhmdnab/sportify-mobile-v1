@@ -47,6 +47,7 @@ export type NotificationsStackParamList = {
 export type ProfileStackParamList = {
   ProfileScreen: undefined;
   EditProfile: undefined;
+  ChangePassword: undefined;
   MyReservations: undefined;
   ReservationDetail: { reservationId: number };
   FAQs: undefined;

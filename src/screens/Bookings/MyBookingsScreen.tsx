@@ -42,7 +42,6 @@ const filterPills: { key: FilterKey; label: string }[] = [
   { key: ReservationStatus.COACH_PENDING, label: 'Coach Pending' },
   { key: ReservationStatus.COACH_REJECTED, label: 'Coach Rejected' },
   { key: ReservationStatus.PAID, label: 'Paid' },
-  { key: ReservationStatus.CANCELLED, label: 'Cancelled' },
   { key: ReservationStatus.REJECTED, label: 'Rejected' },
   { key: ReservationStatus.EXPIRED, label: 'Expired' },
 ];

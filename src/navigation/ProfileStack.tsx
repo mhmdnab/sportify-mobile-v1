@@ -10,6 +10,7 @@ import { BlogsScreen } from '../screens/Profile/BlogsScreen';
 import { BlogDetailScreen } from '../screens/Profile/BlogDetailScreen';
 import { TermsScreen } from '../screens/Profile/TermsScreen';
 import { PrivacyScreen } from '../screens/Profile/PrivacyScreen';
+import { ChangePasswordScreen } from '../screens/Profile/ChangePasswordScreen';
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
@@ -25,6 +26,7 @@ export function ProfileStack() {
       <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
       <Stack.Screen name="Terms" component={TermsScreen} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
     </Stack.Navigator>
   );
 }
